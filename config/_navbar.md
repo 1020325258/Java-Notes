@@ -1,18 +1,17 @@
 
 * 后端开发
-  * <div style="font-weight: bold;font-size: 18px">Docker</div>
+  * <div style="font-weight: bold;font-size: 18px;color: orange">Docker</div>
   * [Docker-Compose](/notes/后端开发/Docker/Docker-Compose/Docker-Compose.md)
   * [Docker部署项目](/notes/后端开发/Docker/Docker部署项目/Docker部署项目.md)
   * [Portainer](/notes/后端开发/Docker/Portainer/Portainer.md)
   * [安装虚拟机+docker部署中间件](/notes/后端开发/Docker/安装虚拟机+docker部署中间件/安装虚拟机+docker部署中间件.md)
-* 压力测试与性能优化
-  * [压力测试与性能优化](/notes/后端开发/压测与性能优化/压测与性能优化.md) 
 * 中间件
+  * <div style="font-weight: bold;font-size: 18px;color: orange">Redis</div>
   * [Redis实现订阅发布](/notes/后端开发/Redis/Redis实现订阅发布/Redis实现订阅发布.md)
-  * [Redis实现订阅发布](/notes/后端开发/Redis/Redis核心知识/Redis核心知识.md)
-  * [Redis实现订阅发布](/notes/后端开发/Redis/Redis实现订阅发布/Redis实现订阅发布.md)
-* 生产环境问题
-  * [Redis实现订阅发布](/notes/生产环境问题/Full GC生产环境问题/Full GC生产环境问题.md)
+  * [Redis核心知识](/notes/后端开发/Redis/Redis核心知识/Redis核心知识.md)
+* 调优
+  * [Full GC生产环境问题](/notes/生产环境问题/Full GC生产环境问题/Full GC生产环境问题.md)
+  * [压力测试与性能优化](/notes/后端开发/压测与性能优化/压测与性能优化.md)
 * 常用技术总结
   * [单机限流](/notes/1.单机限流.md)
   * [级联选择框](/notes/2.级联选择框.md)
