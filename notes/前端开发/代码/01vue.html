@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="app">{{msg}}</div>
+
+    
+    <script src="./vue.min.js"></script>
+    <script>
+        // 声明变量 let/const(常量)
+        const app = new Vue({
+            el: '#app',//挂载需要管理的元素
+            data: {
+                msg: 'Hello World！'
+            }
+        });
+        </script>
+</body>
+</html>

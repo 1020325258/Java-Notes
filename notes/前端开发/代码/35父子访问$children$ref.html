@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <div id="app">
+    <cpn :title="Vtitle" ref="cpn1"></cpn>
+    <button @click="btnClick">按钮</button>
+  </div>
+
+  <template id="cpn">
+    <div>
+      我是子组件
+      {{title}}
+    </div>
+  </template>
+  <script src="./vue.min.js"></script>
+  <script>
+    const app = new Vue({
+      el: "#app",
+      data: {
+        Vtitle: "父组件的标题"
+      },
+      methods: {  
+        btnClick(){
+          // console.log(this.$children[0].showMessage());
+          console.log(this.$refs.cpn1.showMessage());
+        }
+      },
+      components: {
+        'cpn':{
+          template: "#cpn",
+          props: {
+            title: String
+          },
+          methods: {
+            showMessage(){
+              console.log("调用了子组件中的showMessage方法");
+            }
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>

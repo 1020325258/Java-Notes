@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <h2 v-if="isShow">isShow为true的时候，显示我</h2>
+  <h2 v-else>isShow为false的时候，显示我</h2>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+
+  const app = new Vue({
+    el: '#app',
+    data: {
+      isShow: true
+    },
+    methods: {
+
+    }
+  })  
+</script>
+</body>
+</html>

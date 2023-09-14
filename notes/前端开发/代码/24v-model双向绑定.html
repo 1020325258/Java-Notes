@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <div id="app">
+    <!-- v-model也可以通过 v-bind+v-on:input来实现
+        v-bind: 通过v-bind绑定message
+        @input: 通过@input监听输入框的输入事件，通过$event获取输入事件，将输入的值动态的赋给message
+    -->
+    <input type="text" :value="message" @input="message = $event.target.value">
+    <input type="text" v-model.lazy="message">
+    {{message}}
+  </div>
+
+  <script src="./vue.min.js"></script>
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        message: 'Hello World !'
+      }
+    })
+  </script>
+</body>
+</html>

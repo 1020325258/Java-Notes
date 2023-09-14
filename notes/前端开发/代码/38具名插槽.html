@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <div id="app">
+    <cpn><button slot="center">button</button></cpn>
+  </div>
+
+  <template id="cpn">
+    <div>
+      <slot name="left">left</slot>
+      <slot name="center">center</slot>
+      <slot name="right">right</slot>
+    </div>
+  </template>
+  <script src="./vue.min.js"></script>
+  <script>
+    const app = new Vue({
+      el: "#app",
+      components: {
+        'cpn':{
+          template: "#cpn",
+        }
+      }
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+
+  <div id="app">
+    <cpn2></cpn2>
+  </div>
+
+  <script src="./vue.min.js"></script>
+  <script>
+    // 1、创建组件构造器对象1
+    const cpnC1 = Vue.extend({
+      template: `
+        <div>
+          <h2>我是标题1</h2>
+          <p>我是内容</p>
+        </div>
+      `
+    })
+    // Vue.component('cpn',{
+    //   template: `
+    //     <div>
+    //       <h2>我是标题1</h2>
+    //       <p>我是内容</p>
+    //     </div>
+    //   `
+    // })
+    // 2、创建组件构造器对象2
+    // const cpnC2 = Vue.extend({
+    //   template: `
+    //     <div>
+    //       <h2>我是标题2</h2>
+    //       <p>我是内容</p>
+    //       <cpn1></cpn1>
+    //     </div>
+    //   `,
+    //   components: {
+    //     'cpn1': {
+    //       template: `
+    //     <div>
+    //       <h2>我是标题1</h2>
+    //       <p>我是内容</p>
+    //     </div>
+    //   `
+    //     }
+    //   }
+    // })
+    const app = new Vue({
+      el: '#app',
+      data: {
+      },
+      components: {
+        cpn2: cpnC2
+      }
+    })
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <div @click="divclick">
+    div中的内容 
+    <button @click.stop="btnclick">按钮</button>
+  </div>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+
+  const app = new Vue({
+    el: '#app',
+    data: {
+    },
+    methods: {
+      divclick(){
+        console.log("divclick");
+      },
+      btnclick(){
+        console.log("btnclick");
+      }
+    }
+  })  
+</script>
+</body>
+</html>

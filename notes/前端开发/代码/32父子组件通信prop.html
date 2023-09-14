@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+
+  <div id="app">
+    <!-- 在使用组件的时候，使用v-bind绑定父组件中的值 -->
+    <cpn :cmovies="movies" :cmessage="message"></cpn>
+  </div>
+  <template id="cpn">
+    <div>
+      {{cmovies}}
+      {{cmessage}}
+    </div>
+  </template>
+
+  <script src="./vue.min.js"></script>
+  <script>
+
+    const cpn = {
+      template: "#cpn",
+      // 定义传递时的名称
+      // props对象类型的写法，可以定义类型/是否必须/默认值
+      props: {
+        cmovies: {
+          type: Array,
+          required: true,
+          // 如果是对象或数组类型，默认值必须是函数
+          default(){
+            return []
+          }
+        },
+        cmessage: {
+          type: String,
+          required: false,
+          default: 'aaa'
+        }
+      },
+      data(){
+        return {}
+      }
+    }
+
+    const app = new Vue({
+      el: '#app',
+      data: {
+        movies: ['海王','海尔兄弟','调音师'],
+        message: '你好'
+      },
+      //定义组件：用到了属性的增强写法 'cpn':cpn
+      components: {
+        cpn
+      }
+    })
+  </script>
+</body>
+
+</html>

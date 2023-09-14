@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <!-- 在这里调用了两次计算属性，但是实际上只执行了一次 -->
+  <h2>{{fullName}}</h2>
+  <h2>{{fullName}}</h2>
+  <!-- 在这里调用了两次方法，方法执行了两次 -->
+  <h2>{{getFullName()}}</h2>
+  <h2>{{getFullName()}}</h2>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      firstName: 'Kobe',
+      lastName: 'Bryant'
+    },
+    computed: {
+      fullName: function(){
+        console.log('调用了计算属性');
+        return this.firstName + ' ' + this.lastName;
+      }
+    },
+    methods: {
+      getFullName: function(){
+        console.log('调用了method');
+        return this.firstName + ' ' + this.lastName;
+      }
+    }
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+
+  <div id="app">
+    <!-- 注意这里：v-bind不支持驼峰命名，所以写:cInfo的话，获取不到数据 -->
+    <cpn :c-info="info"></cpn>
+  </div>
+  
+  <template id="cpn">
+    <div>
+      <h2>{{cInfo}}</h2>
+    </div>
+  </template>
+
+  <script src="./vue.min.js"></script>
+  <script>
+
+    const cpn = {
+      template: "#cpn",
+      props: {
+        //这里使用驼峰命名
+        cInfo: {
+          type: Object,
+          default(){
+            return {}
+          }
+        }
+      }
+    }
+
+    const app = new Vue({
+      el: "#app",
+      data: {
+        info: {name: 'Lucy',age: 19,address: '北京'}
+      },
+      components: {
+        cpn
+      }
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+
+  <div id="app">
+    <label for="male">
+      <!-- 两个input标签的name写一样，保证radio同时只可以选择一个 -->
+      <!-- 当我们写了v-model绑定了sex之后，就可以省略name属性，也可以实现两个input标签互斥 -->
+      <input type="radio" id="male" name="sex" v-model="sex" value="男"> 男
+    </label>
+    <label for="female">
+      <input type="radio" id="female" name="sex" v-model="sex" value="女">女
+    </label>
+    <h2>您选择的性别是：{{sex}}</h2>
+  </div>
+  
+  <script src="./vue.min.js"></script>
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        sex: ''
+      }
+    })
+  </script>
+</body>
+</html>

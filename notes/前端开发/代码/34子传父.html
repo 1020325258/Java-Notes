@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <div id="app">
+    <!-- 3、在父组件中监听发送的事件 -->
+    <cpn :c-categories="categories" @item-click="fun"></cpn>
+  </div>
+  <template id="cpn">
+    <div>
+      <!-- 1、定义子组件的点击事件 -->
+      <button v-for="item in cCategories" @click="itemClick(item)">{{item.name}}</button>
+    </div>
+  </template>
+
+  <script src="./vue.min.js"></script>
+  <script>
+    const cpn = {
+      template: "#cpn",
+      props: {
+        cCategories: {
+          type: Array,
+          default() {
+            return {}
+          }
+        }
+      },
+      methods:{
+        // 2、子组件点击之后，通过$emit向父组件发送事件，第一个参数：发送的事件的名称
+        // 第二个参数：发送的参数
+        itemClick(item){
+          this.$emit("item-click",item)
+        }
+      }
+    }
+
+    const app = new Vue({
+      el: "#app",
+      data: {
+        categories: [
+          {id: 1,name: '热门推荐'},
+          {id: 2,name: '数码宝贝'},
+          {id: 3,name: '家用家电'},
+          {id: 4,name: '欢迎光临'}
+        ]
+      },
+      components: {
+        cpn
+      },
+      methods: {
+        fun(item){
+          console.log(item);
+        }
+      }
+    })
+  </script>
+</body>
+</html>

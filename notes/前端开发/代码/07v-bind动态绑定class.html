@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+  .active{
+    color: red;
+  }
+</style>
+<body>
+    
+<div id="app">
+  <!-- 方式一：使用v-bind绑定class属性，对象类型{keu1:value1,key2:value2} ，key存放样式，value存放布尔类型值，来决定是否显示 -->
+  <h2 :class="{active: true,line: false}">{{msg}}</h2>
+  <!-- 不过我们一般不直接写true或者false -->
+  <h2 :class="{active: isActive,line: isLine}">{{msg}}</h2>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      msg: "Hello World!",
+      isActive: false,
+      isLine: true
+    }
+  })
+</script>
+</body>
+</html>

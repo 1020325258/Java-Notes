@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <!-- 50px必须加上单引号，否则会当做变量解析 -->
+  <h2 :style="{fontSize: '50px'}">Hello World !</h2>
+  <!-- finalSize被当做变量解析，后边需要拼接上px -->
+  <h2 :style="{fontSize: finalSize+'px'}">Hello World !</h2>
+  <!-- 绑定方法来获取style样式 -->
+  <h2 :style="getStyles()">Hello World !</h2>
+
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      finalSize: 20,
+      finalColor: 'red'
+    },
+    methods: {
+      getStyles: function(){
+        return {fontSize: this.finalSize + 'px',backgroundColor: this.finalColor}
+      }
+    }
+  })
+</script>
+</body>
+</html>

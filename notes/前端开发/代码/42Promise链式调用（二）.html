@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+
+  <script>
+
+    // aaa 
+    // aaa111
+    // aaa111222
+    // Promise的参数resolve和reject是可选的
+    // new Promise((resolve,reject) => {
+    //   resolve('aaa')
+    // }).then((res) => {
+    //   console.log(res,'第一次对代码的处理');
+      
+    //   return new Promise((resolve) => {
+    //     resolve(res+'111')
+    //   })
+    // }).then((res) => {
+    //   console.log(res,'第二次对代码的处理');
+      
+    //   return new Promise((resolve) => {
+    //     resolve(res+'222')
+    //   })
+    // }).then((res) => {
+    //   console.log(res,'第三次对代码的处理');
+      
+    // })
+
+    // new Promise((resolve,reject) => {
+    //   resolve('aaa')
+    // }).then((res) => {
+    //   console.log(res,'第一次对代码的处理');
+      
+    //   return Promise.resolve(res+'111')
+    // }).then((res) => {
+    //   console.log(res,'第二次对代码的处理');
+      
+    //   return Promise.resolve(res+'222')
+    // }).then((res) => {
+    //   console.log(res,'第三次对代码的处理');
+      
+    // })
+
+    // new Promise((resolve,reject) => {
+    //   resolve('aaa')
+    // }).then((res) => {
+    //   console.log(res,'第一次对代码的处理');
+      
+    //   return res+'111'
+    // }).then((res) => {
+    //   console.log(res,'第二次对代码的处理');
+      
+    //   return res+'222'
+    // }).then((res) => {
+    //   console.log(res,'第三次对代码的处理');
+      
+    // })
+  
+    Promise.all([
+      new Promise((resolve, reject) => {
+        $.ajax({
+          url: 'url1',
+          success: function(data){
+            resolve(data)
+          }
+        })
+      }),
+      new Promise((resolve, reject) => {
+        $.ajax({
+          url: 'url2',
+          success: function(data){
+            resolve(data)
+          }
+        })
+      })
+    ]).then(results => {
+      // results[0] 就是第一个Promise返回的结果
+      // results[1] 就是第二个Promise返回的结果
+      console.log(results);
+    })
+
+
+
+
+  </script>
+</body>
+</html>

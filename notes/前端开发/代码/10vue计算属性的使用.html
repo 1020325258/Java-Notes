@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <!-- 使用mustache语法来拼接 -->
+  <h2>{{firstName + ' ' + lastName}}</h2>
+  <!-- 使用计算属性 -->
+  <h2>{{fullName}}</h2>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      firstName: 'Kobe',
+      lastName: 'Byrant'
+    },
+    computed: {
+      fullName: function(){
+        return this.firstName + ' ' + this.lastName;
+      }
+    },
+    methods: {
+    }
+  })
+</script>
+</body>
+</html>

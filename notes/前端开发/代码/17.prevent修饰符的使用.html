@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <!-- @keyUp用于监听键盘事件,加上.enter之后用于监听enter键 -->
+  <input type="text" @keyUp.enter="keyUp"></input>
+  <form action="baidu">
+    <!-- 我们希望浏览器不会自动提交，而只执行我们的onclick事件进行提交 -->
+    <button type="submit" @click.prevent="btnSub">提交</button>
+
+  </form>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+
+  const app = new Vue({
+    el: '#app',
+    data: {
+    },
+    methods: {
+      btnSub() {
+        console.log('btnSub');
+      },
+      keyUp(){
+        console.log("keyUp");
+      }
+    }
+  })  
+</script>
+</body>
+</html>

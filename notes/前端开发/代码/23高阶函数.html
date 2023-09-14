@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <script src="./vue.min.js"></script>
+  <script>
+    let nums = [1324,1324,34,25,134,4215,53,231];
+    // filter中的回调函数有一个要求：必须返回布尔类型的值 true/false
+    // filter的回调函数会取出数组中的每一个值进行回调
+    // true：当返回true的时候，函数内部会自动将这次回调的n加入到新的数组中
+    // false：当返回false的时候，函数内部会过滤掉这次的n
+    // 现在的需求：将数组中100以下的数取出来。使用filter()非常方便
+    // let newNums = nums.filter(function(n){
+    //   if(n < 100)
+    //     return true;
+    // })
+    // console.log(newNums);//会将2打印出来
+    // let new2Nums = newNums.map(function(n){
+    //   return n*2;
+    // })
+    // console.log(new2Nums);
+
+    // // reduce函数的作用：用于对数组中的值进行汇总 
+    // // 如下：求数组中所有的元素的和
+    // let nums2 = [123 , 23 , 245 , 125 , 123 ]
+    // let total = nums2.reduce(function(prevalue,n){
+    //   return prevalue + n
+    // },0)
+    //第1次： prevalue = 0 ， n = 123  为什么prevalue为0？因为我们传入了一个默认参数0。
+    //第2次： prevalue = 123, n = 23  
+    //第3次： prevalue = 146, n = 245
+    //第4次： prevalue = 391, n = 125
+    //第5次： prevalue = 516, n = 123
+    //第6次： prevalue = 639, n = 0
+    // console.log(total);
+    let total = nums.filter(function(n){
+      if(n < 100) return true;
+    }).map(function(n){
+      return n*2;
+    }).reduce(function(prevalue,n){
+      return prevalue + n;
+    },0)
+    let total2 = nums.filter(n => n < 100).map(n => n*2).reduce((pre,n) => pre+n)
+    console.log(total);
+    console.log(total2);
+    
+    
+  </script>
+</body>
+</html>

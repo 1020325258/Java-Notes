@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <button @click="btn1">按钮1</button><!--我是按钮1 -->
+  <button @click="btn2">按钮2</button><!--undefined -->
+  <button @click="btn2()">按钮3</button><!--MouseEvent {isTrusted: true...} -->
+  <button @click="btn3('张三',$event)">按钮4</button>
+  <button>按钮5</button>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+
+  const app = new Vue({
+    el: '#app',
+    data: {
+    },
+    methods: {
+      btn1(){
+        console.log("我是按钮1");
+      },
+      btn2(event){ 
+        console.log(event);
+      },
+      btn3(param , event){
+        console.log('参数为：'+param);
+        console.log('事件为：'+event);
+      }
+    }
+  })  
+</script>
+</body>
+</html>

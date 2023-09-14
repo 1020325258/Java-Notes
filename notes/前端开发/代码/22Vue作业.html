@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    table{
+      border: red 1px solid;
+    }
+    tr,td{
+      border: red 1px solid;
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="app">
+    <div v-if="books.length">
+      <table>
+        <tr>
+          <td>书籍名称</td>
+          <td>出版日期</td>
+          <td>价格</td>
+          <td>购买数量</td>
+          <td>操作</td>
+        </tr>
+        <tr v-for="(item,index) in books">
+          <td>{{item.name}}</td>
+          <td>{{item.date}}</td>
+          <!-- toFixed(2)：让价格保留两位小数 -->
+          <td>{{item.price | showPirce()}}</td>
+          <td>  
+            <!-- click事件传入index，用于改变书的数量 -->
+            <!-- v-bind绑定disabled，实现当数量小于1的时候，不能够再减少 -->
+            <button @click="decrement(index)" :disabled="item.number <= 1">-</button>
+            {{item.number}}
+            <button @click="increment(index)">+</button>
+          </td>
+          <td><button @click="remove(index)">移除</button></td>
+        </tr>
+      </table>
+      <!-- 使用过滤器 -->
+      <h2>总价格：{{totalPrice | showPirce}}</h2>
+    </div>
+    <h2 v-else>购物车为空</h2>
+  </div>
+
+  <script src="./vue.min.js"></script>
+  <script>
+    const app = new Vue({
+      el: "#app",
+      data: {
+        books: [
+          {id: 101 , name: '编程珠玑' ,date: '2019-02-02' , price: 68 , number: 1},
+          {id: 102 , name: '计算机组成原理' ,date: '2019-04-02' , price: 49 , number: 1},
+          {id: 103 , name: '数据结构与算法' ,date: '2019-05-02' , price: 34 , number: 1},
+          {id: 104 , name: '编译原理' ,date: '2019-02-02' , price: 75 , number: 1},
+        ]
+      },
+      // 过滤器
+      filters:{
+        showPirce(price){
+          return '￥' + price.toFixed(2);
+        }
+      },
+      methods: {
+        increment(index){
+          this.books[index].number++
+        },
+        decrement(index){
+          this.books[index].number--
+        },
+        //移除方法
+        remove(index){
+          // 使用splice方法移除，从index下标开始，移除一个元素
+          this.books.splice(index,1)
+        }
+      },
+      computed: {
+        // 使用计算属性展示总价格
+        totalPrice(){
+          let totalPrice = 0;
+          for(let i = 0 ; i < this.books.length ; i++)
+          {
+            totalPrice += this.books[i].price * this.books[i].number
+          }
+          return totalPrice
+        }
+      }
+    })
+  </script>
+</body>
+</html>

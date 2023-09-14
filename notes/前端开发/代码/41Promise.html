@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+
+  <script>
+
+    new Promise((resolve, reject) => {
+
+      //1、这是第一次异步操作，在异步操作调用resolve()
+      //调用resolve后，会执行then里面的操作
+      setTimeout(() => {
+        resolve()
+        //如果有错误，使用reject,会调用catch
+        reject("error message")
+      },1000)
+
+    }).then(() => {
+      //这是对第一次异步操作的处理
+      console.log("这是对第一次的异步操作的处理");
+
+      //2、如果还有异步操作，return一个新的Promise
+      return new Promise((resolve, reject) => {
+        //3、这是第三次异步操作，调用resolve()执行then
+        setTimeout(() => {
+          resolve()
+        },1000)
+
+      })
+    }).then(() => {
+      //4、这是对第二次异步操作的处理
+      console.log("这是err对第二次的异步操作的处理");
+      
+    }).catch((err) => {
+      console.log(err);
+    })
+
+
+  </script>
+</body>
+</html>

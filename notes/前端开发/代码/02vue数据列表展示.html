@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div id="app">
+        <ul>
+            <!-- 使用v-for遍历出数组中的元素 -->
+            <li v-for="item in movies">{{item}}</li>
+        </ul>
+    </div>
+
+    <script src="./vue.min.js"></script>
+    <script>
+        const app = new Vue({
+            el: '#app',
+            data: {
+                movies: ['大话西游','唐人街探案','调音师']
+            }
+        })
+    </script>
+</body>
+
+</html>

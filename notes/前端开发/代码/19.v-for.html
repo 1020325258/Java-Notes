@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="app">
+  <ul>
+    <!-- 1、遍历数组中的value值 -->
+    <li v-for="name in names">{{name}}</li>
+  </ul>
+  <ul>
+    <!-- 2、遍历对象中的value值 -->
+    <li v-for="item in person">{{item}}</li>
+  </ul>
+  <ul>
+    <!-- 3、遍历对象中的key、value值 -->
+    <li v-for="(value,key) in person">{{key}} : {{value}}</li>
+  </ul>
+</div>
+
+<script src="./vue.min.js"></script>
+<script>
+
+  const app = new Vue({
+    el: '#app',
+    data: {
+      names: ['Lucy','Curry','Tom','James'],
+      person: {
+        name: 'Tom',
+        age: 18,
+        address: '北京'
+      }
+    },
+    methods: {
+
+    }
+  })  
+</script>
+</body>
+</html>
