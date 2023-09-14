@@ -10,7 +10,7 @@
   * [Redis实现订阅发布](/notes/后端开发/Redis/Redis实现订阅发布/Redis实现订阅发布.md)
   * [Redis核心知识](/notes/后端开发/Redis/Redis核心知识/Redis核心知识.md)
 * 调优
-  * [Full GC生产环境问题](/notes/生产环境问题/Full GC生产环境问题/Full GC生产环境问题.md)
+  * [FullGC生产环境问题](/notes/生产环境问题/FullGC生产环境问题/FullGC生产环境问题.md)
   * [压力测试与性能优化](/notes/后端开发/压测与性能优化/压测与性能优化.md)
 * 常用技术总结
   * [单机限流](/notes/常用技术总结/1.单机限流.md)
@@ -29,5 +29,5 @@
   * [Docker打包JDK20镜像](/notes/常用技术总结/14.Docker打包JDK20镜像.md)
   * [JavaEdge文章总结](/notes/常用技术总结/15.JavaEdge文章总结.md)
 * 项目学习总结
-  * [Api网关系统](/notes/Api网关系统/Api网关系统.md)
-  * [simple-rpc](/notes/simple-rpc和科研平台/simple-rpc项目总结.md)
+  * [Api网关系统](/notes/项目学习总结/Api网关系统/Api网关.md)
+  * [simple-rpc](/notes/项目学习总结/simple-rpc和科研平台/simple-rpc项目总结.md)
