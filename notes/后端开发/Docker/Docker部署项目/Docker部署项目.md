@@ -339,3 +339,15 @@ CMD ["java","-version"]
 #RUN ["yum","install","-y","gcc"]
 ```
 
+
+
+
+
+# 6、部署yudao-cloud项目
+
+
+
+mvn clean install package -Dmaven.test.skip=true
+
+如果执行报 `Unknown lifecycle phase “.test.skip=true”` 错误，使用 `mvn clean install package -Dmaven.test.skip=true` 即可。
+

@@ -31,3 +31,5 @@
 * 项目学习总结
   * [Api网关系统](/notes/项目学习总结/Api网关系统/Api网关.md)
   * [simple-rpc](/notes/项目学习总结/simple-rpc和科研平台/simple-rpc项目总结.md)
+* Linux
+  * [常用Linux命令](/notes/后端开发/Linux/常用Linux命令/常用Linux命令.md) 
