@@ -2,10 +2,6 @@
 typora-copy-images-to: imgs
 ---
 
-
-
-
-
 # 1、部署Nodejs项目
 
 直接将nodejs项目传入服务器
@@ -345,9 +341,269 @@ CMD ["java","-version"]
 
 # 6、部署yudao-cloud项目
 
+## 基础设施
+
+### mysql
+
+项目使用 MySQL 存储数据，所以需要启动一个 MySQL 服务，建议使用 **5.7** 版本。
+
+① 创建一个名字为 `ruoyi-vue-pro` 数据库，执行对应数据库类型的 [`sql` (opens new window)](https://github.com/YunaiV/yudao-cloud/tree/master/sql)目录下的 SQL 文件，进行初始化。
+
+![1694931064555](imgs/1694931064555.png)
+
+② 默认配置下，MySQL 需要启动在 3306 端口，并且账号是 root，密码是 123456。如果不一致，需要修改 `application-local.yaml` 配置文件。
+
+![1694931076910](imgs/1694931076910.png)
 
 
-mvn clean install package -Dmaven.test.skip=true
 
-如果执行报 `Unknown lifecycle phase “.test.skip=true”` 错误，使用 `mvn clean install package -Dmaven.test.skip=true` 即可。
+### redis
 
+项目使用 Redis 缓存数据，所以需要启动一个 Redis 服务。
+
+一定要使用 **5.0** 以上的版本，项目使用 Redis Stream 作为消息队列。
+
+默认配置下，Redis 启动在 6379 端口，不设置账号密码。如果不一致，需要修改 `application-local.yaml` 配置文件。
+
+![1694931155608](imgs/1694931155608.png)
+
+
+
+
+
+### nacos
+
+项目使用 Nacos 作为**注册中心**和**配置中心**，安装单机即可。
+
+安装完成之后，需要创建 `dev` **命名空间**，如下图所示：
+
+![1694931251708](imgs/1694931251708.png)
+
+
+
+
+
+
+
+## 部署后端项目
+
+本地启动流程：按顺序启动以下三个模块即可。
+
+部署流程：将三个模块打成jar包：yudao-gateway、yudao-module-system-biz、yudao-module-infra-biz
+
+>  infra测试模块如果打包失败，使用以下命令跳过测试模块进行打包：
+>
+> `mvn clean install package -Dmaven.test.skip=true` 
+>
+> 如果执行报 `Unknown lifecycle phase “.test.skip=true”` 错误，使用 `mvn clean install package -Dmaven.test.skip=true` 即可。
+
+
+
+
+
+### gateway模块
+
+- 目录结构：
+
+![1694846525504](imgs/1694846525504.png)
+
+- Dockerfile内容
+
+```dockerfile
+## AdoptOpenJDK 停止发布 OpenJDK 二进制，而 Eclipse Temurin 是它的延伸，提供更好的稳定性
+## 感谢复旦核博士的建议！灰子哥，牛皮！ 这里使用 eclipse-temurin:8-jre 镜像会报错，jre运行时内存不足，于是更换镜像
+# FROM eclipse-temurin:8-jre
+FROM openjdk:8-jdk-alpine
+## 创建目录，并使用它作为工作目录
+RUN mkdir -p /yudao-gateway
+WORKDIR /yudao-gateway
+## 将后端项目的 Jar 文件，复制到镜像中
+COPY yudao-gateway.jar app.jar
+
+## 设置 TZ 时区
+## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
+ENV TZ=Asia/Shanghai JAVA_OPTS="-Xms512m -Xmx512m"
+## 暴露后端项目的 48080 端口
+EXPOSE 48080
+
+## 启动后端项目
+CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
+
+```
+
+
+
+- script脚本内容
+
+```bash
+
+#!/bin/bash
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t yudao-gateway:01 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop yudao-gateway
+docker rm yudao-gateway
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name yudao-gateway -p 48080:48080 -d yudao-gateway:01
+```
+
+
+
+
+
+
+
+### system模块
+
+- 目录结构
+
+![1694931656507](imgs/1694931656507.png)
+
+
+
+- Dockerfile
+
+```dockerfile
+## AdoptOpenJDK 停止发布 OpenJDK 二进制，而 Eclipse Temurin 是它的延伸，提供更好的稳定性
+## 感谢复旦核博士的建议！灰子哥，牛皮！
+#FROM eclipse-temurin:8-jre
+FROM openjdk:8-jdk-alpine
+## 创建目录，并使用它作为工作目录
+RUN mkdir -p /yudao-module-system-biz
+WORKDIR /yudao-module-system-biz
+## 将后端项目的 Jar 文件，复制到镜像中
+COPY yudao-module-system-biz.jar app.jar
+
+## 设置 TZ 时区
+## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
+ENV TZ=Asia/Shanghai JAVA_OPTS="-Xms512m -Xmx512m"
+
+## 暴露后端项目的 48080 端口
+EXPOSE 4881
+
+## 启动后端项目
+CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
+
+```
+
+
+
+- script
+
+```bash
+#!/bin/bash
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t yudao-module-system-biz:01 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop yudao-module-system-biz
+docker rm yudao-module-system-biz
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name yudao-module-system-biz -p 48081:48081 -d yudao-module-system-biz:01
+
+```
+
+
+
+### infra模块
+
+- 目录结构
+
+![1694931599041](imgs/1694931599041.png)
+
+
+
+- Dockerfile：
+
+```dockerfile
+## AdoptOpenJDK 停止发布 OpenJDK 二进制，而 Eclipse Temurin 是它的延伸，提供更好的稳定性
+## 感谢复旦核博士的建议！灰子哥，牛皮！
+#FROM eclipse-temurin:8-jre
+FROM openjdk:8-jdk-alpine
+## 创建目录，并使用它作为工作目录
+RUN mkdir -p /yudao-module-infra-biz
+WORKDIR /yudao-module-infra-biz
+## 将后端项目的 Jar 文件，复制到镜像中
+COPY yudao-module-infra-biz.jar app.jar
+
+## 设置 TZ 时区
+## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
+ENV TZ=Asia/Shanghai JAVA_OPTS="-Xms512m -Xmx512m"
+
+## 暴露后端项目的 48080 端口
+EXPOSE 48082
+
+## 启动后端项目
+CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
+
+```
+
+
+
+
+
+- script:
+
+```sh
+#!/bin/bash
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t yudao-module-infra-biz:01 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop yudao-module-infra-biz
+docker rm yudao-module-infra-biz
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name yudao-module-infra-biz -p 48082:48082 -d yudao-module-infra-biz:01
+
+```
+
+
+
+
+
+
+
+## 部署前端项目
+
+前端项目我现在本地启动测试了，加载不出来数据，就还没有部署。
+
+### 启动 Vue3 + element-plus 管理后台
+
+[`yudao-ui-admin-vue3` (opens new window)](https://github.com/yudaocode/yudao-ui-admin-vue3/)是前端 Vue3 + element-plus 管理后台项目。
+
+① 克隆 [https://github.com/yudaocode/yudao-ui-admin-vue3.git (opens new window)](https://github.com/yudaocode/yudao-ui-admin-vue3.git)项目，并 Star 关注下该项目。
+
+② 在根目录执行如下命令，进行启动：
+
+```
+# 安装 pnpm，提升依赖的安装速度
+npm config set registry https://registry.npmjs.org
+npm install -g pnpm
+# 安装依赖
+pnpm install
+# 启动服务
+npm run dev
+
+```
+
+③ 启动完成后，浏览器会自动打开 [http://localhost:80 (opens new window)](http://localhost/)地址，可以看到前端界面。
+
+![1694932004820](imgs/1694932004820.png)
+
+## 
