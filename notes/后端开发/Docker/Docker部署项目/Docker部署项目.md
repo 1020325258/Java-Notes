@@ -341,6 +341,8 @@ CMD ["java","-version"]
 
 # 6、部署yudao-cloud项目
 
+官方部署文档：https://cloud.iocoder.cn/quick-start/#_7-1-%E5%90%AF%E5%8A%A8-vue3-element-plus-%E7%AE%A1%E7%90%86%E5%90%8E%E5%8F%B0
+
 ## 基础设施
 
 ### mysql
@@ -398,6 +400,8 @@ CMD ["java","-version"]
 > 如果执行报 `Unknown lifecycle phase “.test.skip=true”` 错误，使用 `mvn clean install package -Dmaven.test.skip=true` 即可。
 
 
+
+在部署后端项目时，记得修改配置的中间件的ip，需要修改的文件为三个模块下的：application.yaml、application-local.yaml、bootstrap.yaml、bootstrap-local.yaml （这四个文件中所有出现ip的地方都要进行修改）
 
 
 
@@ -605,5 +609,92 @@ npm run dev
 ③ 启动完成后，浏览器会自动打开 [http://localhost:80 (opens new window)](http://localhost/)地址，可以看到前端界面。
 
 ![1694932004820](imgs/1694932004820.png)
+
+
+
+
+
+## 常见问题
+
+- 启动前端项目之后，验证码不显示问题
+
+![1694956921089](imgs/1694956921089.png)
+
+
+
+使用docker查看system、infra模块日志，发现在 CaptchaController 类里的第 40 行，报错，空指针异常，代码如下：
+
+```java'
+return captchaService.get(data);
+```
+
+异常结果如下：
+
+![1694958186268](imgs/1694958186268.png)
+
+由空指针异常猜测，captchaService.get 方法中出现了空指针异常
+
+在 yudao-module-system-biz 模块下的 application.yaml 文件中，发现了 captcha 的配置，猜测可能是因为这里路径或者打包的原因，导致图片没有打包进去
+
+先尝试修改 application.yaml  文件，关闭验证码功能：
+
+```yaml
+  captcha:
+    enable: false # 验证码的开关，默认为 true；
+```
+
+关闭验证码功能还不行，并没有关闭掉
+
+进一步查看空指针异常出现的位置：BlockPuzzleCaptchaServiceImpl 的第 65 行位置：
+
+![1694958345842](imgs/1694958345842.png)
+
+由此判断，可能是静态资源没有打包进去，导致读取不到图片
+
+找到 yudao-module-system-biz 模块下的 application.yaml 文件，captchar 的图片配置路径为：
+
+![1694958535503](imgs/1694958535503.png)
+
+
+
+发县 images/jigsaw 以及 images/pic-click 两个目录都在 yudao-spring-boot-starter-captcha 模块中，大概率问题在没有将这两个目录打进 jar 包，导致图片读取不到。
+
+既然是打包的原因，那么查看在哪个模块下引入了 yudao-spring-boot-starter-captcha 模块，使用 idea 搜索关键字 yudao-spring-boot-starter-captcha 即可：
+
+![1694958942420](imgs/1694958942420.png)
+
+可以发现在 yudao-module-system-biz 模块中进行引入了，于是查看 yudao-module-system-biz 模块的打包是否存在问题。
+
+由于是 system 模块引入了 captcha 模块，而图片又在 captcha 模块中，因此可能是 captcha 模块打包没有将 resources 目录打包进去，因此在 system 模块引入 captcha 模块导致找不到图片，在 captcha 模块的 pom.xml 文件中加入以下代码尝试将 resources 目录下所有文件打包：
+
+```xml
+
+    <build>
+        <!-- 资源目录 -->
+        <resources>
+            <resource>
+                <!-- 设定主资源目录  -->
+                <directory>src/main/java</directory>
+
+                <!-- maven default生命周期，process-resources阶段执行maven-resources-plugin插件的resources目标处理主资源目下的资源文件时，只处理如下配置中包含的资源类型 -->
+                <includes>
+                    <include>**/*</include>
+                </includes>
+
+            </resource>
+
+        </resources>
+    </build>
+```
+
+
+
+之后重新将 captcha 和 system 模块进行打包，重新部署，看问题是否解决
+
+问题仍然没有解决，此时观察 infra 模块日志，又出现了新的问题：
+
+![1694959516514](imgs/1694959516514.png)
+
+是 docker 不同容器之间无法进行通信
 
 ## 

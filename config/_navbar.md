@@ -1,7 +1,7 @@
 
 * 后端开发
   * <div style="font-weight: bold;font-size: 18px;color: orange">Docker</div>
-  * [Docker-Compose](/notes/后端开发/Docker/Docker-Compose/Docker-Compose.md)
+  * [Docker](/notes/后端开发/Docker/Docker/Docker.md)
   * [Docker部署项目](/notes/后端开发/Docker/Docker部署项目/Docker部署项目.md)
   * [Portainer](/notes/后端开发/Docker/Portainer/Portainer.md)
   * [安装虚拟机+docker部署中间件](/notes/后端开发/Docker/安装虚拟机+docker部署中间件/安装虚拟机+docker部署中间件.md)
@@ -9,6 +9,8 @@
   * <div style="font-weight: bold;font-size: 18px;color: orange">Redis</div>
   * [Redis实现订阅发布](/notes/后端开发/Redis/Redis实现订阅发布/Redis实现订阅发布.md)
   * [Redis核心知识](/notes/后端开发/Redis/Redis核心知识/Redis核心知识.md)
+  * <div style="font-weight: bold;font-size: 18px;color: orange">MySQL</div>
+  * [MySQL核心知识](/notes/后端开发/MySQL/MySQL.md)
 * 调优
   * [FullGC生产环境问题](/notes/生产环境问题/FullGC生产环境问题/FullGC生产环境问题.md)
   * [压力测试与性能优化](/notes/后端开发/压测与性能优化/压测与性能优化.md)
@@ -33,3 +35,6 @@
   * [simple-rpc](/notes/项目学习总结/simple-rpc和科研平台/simple-rpc项目总结.md)
 * Linux
   * [常用Linux命令](/notes/后端开发/Linux/常用Linux命令/常用Linux命令.md) 
+* 面试题
+  * [Java面试题-基础](/notes/面试题/Java面试题-基础.md)
+  * [Java面试题-进阶](/notes/面试题/Java面试题-进阶.md)

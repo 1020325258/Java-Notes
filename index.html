@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Learning-Notes</title>
+    <title>0-0 DOCSIFY笔记</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
     <meta name="description" content="Description">
     <meta name="viewport"
@@ -18,12 +18,18 @@
 </head>
 
 <body>
+    <!-- 置顶插件 -->
+    <script src="./lib/docsify-backTop.min.js"></script>
     <!-- 定义加载时候的动作 -->
     <div id="app">加载中...</div>
     <script>
+        docsifyBackTop = {
+            size: 56,           	// 数值，组件大小，默认值32。
+            right: 12,          	// 数值，组件右侧偏移距离，默认值15。
+        };
         window.$docsify = {
             // 项目名称
-            name: 'Learning-Notes',
+            name: '0-0 docsify笔记',
             // 仓库地址，点击右上角的Github章鱼猫头像会跳转到此地址
             repo: 'https://gitee.com/star_wwp/learning-notes',
             // 侧边栏支持，默认加载的是项目根目录下的_sidebar.md文件
@@ -34,6 +40,7 @@
             // coverpage: './config/_coverpage.md',
             // 最大支持渲染的标题层级
             maxLevel: 5,
+            auto2top: true,
             // 自定义侧边栏后默认不会再生成目录，设置生成目录的最大层级（建议配置为2-4）
             subMaxLevel: 5,
             // sidebarDisplayLevel: 1, // set sidebar display level
@@ -57,13 +64,14 @@
                 },
                 noData: '找不到结果',
                 depth: 5,
-                // hideOtherSidebarContent: true,
-                // namespace: 'Learning-Notes',
+                hideOtherSidebarContent: true,
+                namespace: '0-0 docsify笔记',
             }
         }
     </script>
     <!-- docsify的js依赖 -->
     <script src="./lib/docsify.min.js"></script>
+    <!-- <script src="./lib/docsify-pagination.min.js"></script> -->
     <!-- emoji表情支持 -->
     <script src="./lib/emoji.min.js"></script>
     <!-- 图片放大缩小支持 -->
@@ -77,8 +85,8 @@
     <!-- 字数统计 -->
     <script src="./lib/countable.js"></script>
     <!-- iframe显示 -->
-    <script src="//cdn.jsdelivr.net/npm/codeblock-iframe@latest/dist/index.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/docsify-codeblock-iframe@latest/dist/index.min.js"></script>
+    <script src="./lib/codeblock-iframe.js"></script>
+    <script src="./lib/docsify-codeblock-iframe.js"></script>
     <!-- 引入 Prism.js 的 JavaScript 文件 -->
     <script src="./lib/prism-bash.min.js"></script>
     <script src="./lib/prism-java.min.js"></script>

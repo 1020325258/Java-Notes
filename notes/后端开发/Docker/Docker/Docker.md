@@ -2,7 +2,63 @@
 typora-copy-images-to: imgs
 ---
 
-# 1、Docker-Compose学习
+
+
+# 1、Docker
+
+
+
+## 镜像和容器组成
+
+docker run 命令 = docker create + docker start 
+
+![1695013464296](imgs/1695013464296.png)
+
+
+
+![1695013503849](imgs/1695013503849.png)
+
+
+
+
+
+## Docker 常用指令
+
+
+
+- 查看容器的文件系统快照（可以查看容器里的文件，如果不加 ls ，默认执行容器的启动指令 sh）
+
+`docker run busybox ls` 
+
+- 清除所有docker
+
+`docker system prune`
+
+- 获取docker日志（-f：实时刷新）
+
+`docker logs -f ${container.id}`
+
+- 获取启动日志（-a：attach）
+
+`docker start -a ${container.id}` 
+
+- 停止容器
+
+kill 会强制退出
+
+`docker stop ${container.id}`
+
+`docker kill ${container.id}`
+
+- docker 交互
+
+-i：interactive 交互模式
+
+-t：模拟 tty 功能，即 -t 会启动终端
+
+`docker exec -it ${container.id} bash`
+
+# 2、Docker-Compose学习
 
 官方文档： https://www.docker.com/get-started
 
@@ -297,6 +353,12 @@ docker-compose up [服务id] # 启动指定容器
 docker-compose -f [docker-compose文件名] up # -f 指定文件名
 docker-compose down # 关闭所有容器
 ```
+
+
+
+
+
+
 
 
 
