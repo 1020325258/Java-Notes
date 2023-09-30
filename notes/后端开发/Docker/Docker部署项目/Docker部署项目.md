@@ -395,9 +395,9 @@ CMD ["java","-version"]
 
 >  infra测试模块如果打包失败，使用以下命令跳过测试模块进行打包：
 >
-> `mvn clean install package -Dmaven.test.skip=true` 
+>  `mvn clean install package -Dmaven.test.skip=true` 
 >
-> 如果执行报 `Unknown lifecycle phase “.test.skip=true”` 错误，使用 `mvn clean install package -Dmaven.test.skip=true` 即可。
+>  如果执行报 `Unknown lifecycle phase “.test.skip=true”` 错误，使用 `mvn clean install package -Dmaven.test.skip=true` 即可。
 
 
 
@@ -415,14 +415,19 @@ CMD ["java","-version"]
 
 ```dockerfile
 ## AdoptOpenJDK 停止发布 OpenJDK 二进制，而 Eclipse Temurin 是它的延伸，提供更好的稳定性
-## 感谢复旦核博士的建议！灰子哥，牛皮！ 这里使用 eclipse-temurin:8-jre 镜像会报错，jre运行时内存不足，于是更换镜像
-# FROM eclipse-temurin:8-jre
+## 感谢复旦核博士的建议！灰子哥，牛皮！
+#FROM eclipse-temurin:8-jre
 FROM openjdk:8-jdk-alpine
 ## 创建目录，并使用它作为工作目录
 RUN mkdir -p /yudao-gateway
 WORKDIR /yudao-gateway
 ## 将后端项目的 Jar 文件，复制到镜像中
 COPY yudao-gateway.jar app.jar
+
+#安装字体
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/* && mkfontscale && mkfontdir && fc-cache
+RUN apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/*
+
 
 ## 设置 TZ 时区
 ## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
@@ -432,7 +437,15 @@ EXPOSE 48080
 
 ## 启动后端项目
 CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
+```
 
+
+
+- build脚本内容
+
+```bash
+#!/bin/bash
+docker build -t yudao-gateway .
 ```
 
 
@@ -484,16 +497,29 @@ WORKDIR /yudao-module-system-biz
 ## 将后端项目的 Jar 文件，复制到镜像中
 COPY yudao-module-system-biz.jar app.jar
 
+#安装字体
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/* && mkfontscale && mkfontdir && fc-cache
+RUN apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/*
+
 ## 设置 TZ 时区
 ## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
 ENV TZ=Asia/Shanghai JAVA_OPTS="-Xms512m -Xmx512m"
 
 ## 暴露后端项目的 48080 端口
-EXPOSE 4881
+EXPOSE 48081
 
 ## 启动后端项目
 CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
 
+```
+
+
+
+- build
+
+```bash
+#!/bin/bash
+docker build -t yudao-module-system-biz .
 ```
 
 
@@ -541,6 +567,10 @@ WORKDIR /yudao-module-infra-biz
 ## 将后端项目的 Jar 文件，复制到镜像中
 COPY yudao-module-infra-biz.jar app.jar
 
+#安装字体
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/* && mkfontscale && mkfontdir && fc-cache
+RUN apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/*
+
 ## 设置 TZ 时区
 ## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
 ENV TZ=Asia/Shanghai JAVA_OPTS="-Xms512m -Xmx512m"
@@ -551,6 +581,15 @@ EXPOSE 48082
 ## 启动后端项目
 CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
 
+```
+
+
+
+- build
+
+```bash
+#!/bin/bash
+docker build -t yudao-module-infra-biz .
 ```
 
 
@@ -583,11 +622,11 @@ docker run --name yudao-module-infra-biz -p 48082:48082 -d yudao-module-infra-bi
 
 
 
+
+
 ## 部署前端项目
 
-前端项目我现在本地启动测试了，加载不出来数据，就还没有部署。
-
-### 启动 Vue3 + element-plus 管理后台
+### 本地启动
 
 [`yudao-ui-admin-vue3` (opens new window)](https://github.com/yudaocode/yudao-ui-admin-vue3/)是前端 Vue3 + element-plus 管理后台项目。
 
@@ -610,6 +649,158 @@ npm run dev
 
 ![1694932004820](imgs/1694932004820.png)
 
+### docker部署
+
+目录结构：
+
+![1695176716530](imgs/1695176716530.png)
+
+- Dokcerfile
+
+```dockerfile
+# 设置基础镜像，这里使用最新的nginx镜像，前面已经拉取过了
+FROM nginx
+#作者
+MAINTAINER xuwangcheng 2631416434@qq.com
+#执行命令，主要用来安装相关的软件
+
+RUN rm /etc/nginx/conf.d/default.conf
+
+ADD default.conf /etc/nginx/conf.d/
+
+#添加文件
+# 将dist文件中的内容复制到 /usr/share/nginx/html/ 这个目录下面
+COPY dist/  /usr/share/nginx/html/
+```
+
+
+
+- default.conf
+
+```bash
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  localhost;
+
+    #access_log  /var/log/nginx/host.access.log  main;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /admin-api/ {
+        proxy_pass   http://10.0.2.15:48080/;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+
+
+
+- script
+
+```bash
+#!/bin/bash
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t yudao-cloud-front:1.0 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop yudao-cloud-front
+docker rm yudao-cloud-front
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name yudao-cloud-front -d -p 8010:80  yudao-cloud-front:1.0
+```
+
+
+
+- build
+
+```bash
+#!/bin/bash
+docker build -t yudao-cloud-front .
+```
+
+
+
+## docker-compose 脚本启动
+
+先使用三个模块中以及前端模块下的 build 脚本进行打包，再启动 docker-compose 脚本，`docker-compose up` 启动
+
+```yaml
+version: '3'
+services:
+  yudao-gateway:
+    image: yudao-gateway
+    container_name: yudao-gateway
+    environment:
+      - TZ=Asia/Shanghai # 配置程序默认时区为上海（中国标准时间）
+    ports:
+      - 48080:48080
+    restart: always
+    networks:
+      - my-net # 网桥
+  yudao-system:
+    image: yudao-module-system-biz
+    container_name: yudao-system
+    environment:
+      - TZ=Asia/Shanghai # 配置程序默认时区为上海（中国标准时间）
+    ports:
+      - 48081:48081
+    healthcheck:
+      test: [ "CMD","curl","-f","http://10.0.2.15:48081" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: always
+    networks:
+      - my-net
+  yudao-infra:
+    image: yudao-module-infra-biz
+    container_name: yudao-infra
+    environment:
+      - TZ=Asia/Shanghai # 配置程序默认时区为上海（中国标准时间）
+    ports:
+      - 48082:48082
+    restart: always
+    networks:
+      - my-net
+    healthcheck:
+      test: [ "CMD","curl","-f","http://10.0.2.15:48082" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      - yudao-system
+  yudao-cloud-front:
+    image: yudao-cloud-front
+    container_name: yudao-cloud-front
+    ports:
+      - 8010:80
+    restart: always
+    networks:
+      - my-net
+networks:
+  my-net: # 声明使用的网桥
+```
+
+
+
+
+
 
 
 
@@ -622,79 +813,46 @@ npm run dev
 
 
 
-使用docker查看system、infra模块日志，发现在 CaptchaController 类里的第 40 行，报错，空指针异常，代码如下：
+使用docker查看system、infra模块日志，发现在 CaptchaController 类里的第 40 行，报错：
 
-```java'
-return captchaService.get(data);
-```
+![1695176140880](imgs/1695176140880.png)
 
-异常结果如下：
-
-![1694958186268](imgs/1694958186268.png)
-
-由空指针异常猜测，captchaService.get 方法中出现了空指针异常
-
-在 yudao-module-system-biz 模块下的 application.yaml 文件中，发现了 captcha 的配置，猜测可能是因为这里路径或者打包的原因，导致图片没有打包进去
-
-先尝试修改 application.yaml  文件，关闭验证码功能：
-
-```yaml
-  captcha:
-    enable: false # 验证码的开关，默认为 true；
-```
-
-关闭验证码功能还不行，并没有关闭掉
-
-进一步查看空指针异常出现的位置：BlockPuzzleCaptchaServiceImpl 的第 65 行位置：
+进一步查看空指针异常出现的位置：BlockPuzzleCaptchaServiceImpl 的第 65 行位置，发现在61、62行中设置了字体：
 
 ![1694958345842](imgs/1694958345842.png)
 
-由此判断，可能是静态资源没有打包进去，导致读取不到图片
-
-找到 yudao-module-system-biz 模块下的 application.yaml 文件，captchar 的图片配置路径为：
-
-![1694958535503](imgs/1694958535503.png)
 
 
+报错原因：在获取验证码时，去获取系统的字体了，而 alpine 中没有中文字体，导致设置字体时失败，因此需要在 docker 部署的时候，安装字体，在 Dockerfile 中加入以下两行即可：
 
-发县 images/jigsaw 以及 images/pic-click 两个目录都在 yudao-spring-boot-starter-captcha 模块中，大概率问题在没有将这两个目录打进 jar 包，导致图片读取不到。
-
-既然是打包的原因，那么查看在哪个模块下引入了 yudao-spring-boot-starter-captcha 模块，使用 idea 搜索关键字 yudao-spring-boot-starter-captcha 即可：
-
-![1694958942420](imgs/1694958942420.png)
-
-可以发现在 yudao-module-system-biz 模块中进行引入了，于是查看 yudao-module-system-biz 模块的打包是否存在问题。
-
-由于是 system 模块引入了 captcha 模块，而图片又在 captcha 模块中，因此可能是 captcha 模块打包没有将 resources 目录打包进去，因此在 system 模块引入 captcha 模块导致找不到图片，在 captcha 模块的 pom.xml 文件中加入以下代码尝试将 resources 目录下所有文件打包：
-
-```xml
-
-    <build>
-        <!-- 资源目录 -->
-        <resources>
-            <resource>
-                <!-- 设定主资源目录  -->
-                <directory>src/main/java</directory>
-
-                <!-- maven default生命周期，process-resources阶段执行maven-resources-plugin插件的resources目标处理主资源目下的资源文件时，只处理如下配置中包含的资源类型 -->
-                <includes>
-                    <include>**/*</include>
-                </includes>
-
-            </resource>
-
-        </resources>
-    </build>
+```dockerfile
+#安装字体
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/* && mkfontscale && mkfontdir && fc-cache
+RUN apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/*
 ```
 
+完整 Dockerfile 文件如下：
+
+```dockerfile
+FROM openjdk:8-jdk-alpine
+## 创建目录，并使用它作为工作目录
+RUN mkdir -p /yudao-gateway
+WORKDIR /yudao-gateway
+## 将后端项目的 Jar 文件，复制到镜像中
+COPY yudao-gateway.jar app.jar
+
+#安装字体
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/* && mkfontscale && mkfontdir && fc-cache
+RUN apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/*
 
 
-之后重新将 captcha 和 system 模块进行打包，重新部署，看问题是否解决
+## 设置 TZ 时区
+## 设置 JAVA_OPTS 环境变量，可通过 docker run -e "JAVA_OPTS=" 进行覆盖
+ENV TZ=Asia/Shanghai JAVA_OPTS="-Xms512m -Xmx512m"
+## 暴露后端项目的 48080 端口
+EXPOSE 48080
 
-问题仍然没有解决，此时观察 infra 模块日志，又出现了新的问题：
+## 启动后端项目
+CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
+```
 
-![1694959516514](imgs/1694959516514.png)
-
-是 docker 不同容器之间无法进行通信
-
-## 

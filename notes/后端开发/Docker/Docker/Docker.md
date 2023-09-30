@@ -58,6 +58,36 @@ kill 会强制退出
 
 `docker exec -it ${container.id} bash`
 
+- 删除镜像
+
+`docker rmi ${image}`
+
+- 查看 docker
+
+`docker info`
+
+`docker version`
+
+- 查看容器日志
+
+-f：实时刷新
+
+`docker logs -f ${container.id}` 
+
+- 查看容器资源消耗
+
+`docker stats`
+
+- 检查容器
+
+`docker inspect ${container.id}`
+
+
+
+
+
+
+
 # 2、Docker-Compose学习
 
 官方文档： https://www.docker.com/get-started
@@ -353,6 +383,10 @@ docker-compose up [服务id] # 启动指定容器
 docker-compose -f [docker-compose文件名] up # -f 指定文件名
 docker-compose down # 关闭所有容器
 ```
+
+
+
+
 
 
 

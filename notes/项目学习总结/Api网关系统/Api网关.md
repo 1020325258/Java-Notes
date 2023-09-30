@@ -15,16 +15,11 @@ typora-copy-images-to: img
 - 无法处理大量的请求，即性能不如 API 网关
 
 
-
-在分布式架构下，主要使用 `RPC`  进行通信，如 Dubbo、gRPC，但是在 Web、小程序、H5 中使用的是 `HTTP`  协议，因此需要 API 网关项目来对 http 请求解析做 rpc 接口的泛化调用。
-
-
-
 ## 为什么需要 API 网关？
 
-在分布式架构下，每一个 web 应用都会有一些共性的需求，限流、监控、熔断、降级、切量，会导致维护成本增加，且都需要一套域名、工程、机器等资源，并且涉及到对文档的维护，那么如果使用 API 网关，就可以将这些共性的需求融入到 API 网关中，不需要在每一个 web 应用都做一套，极大提升研发效率。
+在微服务之间进行通信，如果仍然使用 Http 进行通信，就会很慢，因此就出现了 rpc 架构（socket通信），微服务之间通过 Dubbo 进行通信。但是在 Web、小程序、H5 中使用的是 `HTTP`  协议，如果对每一个微服务都编写一套转发（将 http 调用映射到 rpc 调用上），那么项目将会变得冗余且复杂，因此需要 `API网关` 进行统一的协议转换，对外暴露出 Http 接口提供服务。
 
-
+在分布式架构下，每一个 web 应用都会有一些共性的需求，限流、监控、熔断、降级、切量，会导致维护成本增加，如果可以通过 API 网关进行统一管理，就可以将这些共性的需求融入到 API 网关中，不需要在每一个 web 应用都做一套，极大提升研发效率。
 
 
 
@@ -32,11 +27,13 @@ typora-copy-images-to: img
 
 
 
-## api-core 模块实现
 
 
+## 2.1、api-core 模块
 
-> api-core模块主要实现了使用 netty 服务对用户 http 请求进行鉴权，并且调用执行 rpc 的泛化调用服务
+从 Http 请求到 rpc 的调用，我们使用 Netty 进行协议的转换，一次 Http 的请求就是一次会话，包括了：建立连接、协议转换、方法映射、泛化调用、返回结果等一系列操作。
+
+因此要单独抽取出来一个 `api-gateway-core` 工程模块，`core` 模块并不和 SpringBoot 服务写在一起，而是作为一个组件抽取出来，可以独立使用。
 
 
 
@@ -53,13 +50,44 @@ typora-copy-images-to: img
 
 
 
-### 封装数据源
+### rpc 的泛化调用
 
-我们将 Dubbo 的 rpc 远程调用服务抽象为数据源，将获取 Dubbo 连接抽象为数据源的连接方法，这样以后如果添加其他连接的话，可以很方便的扩展
+为了让 Http 请求与 rpc 调用建立连接，我们需要一个配置类，来建立 `Http -> rpc` 的映射关系 
+
+![1695369055189](img/1695369055189.png)
 
 
 
-### 封装执行器
+在实现 rpc 泛化调用这部分，主要包含两个部分：
+
+- 如何手动实现 rpc 泛化调用？
+- 如何避免硬编码，对每个 Http 请求都编写一套 rpc 泛化调用逻辑？
+
+对于 rpc 泛化调用，只需要知道接口的方法名、参数信息就可以调用到对应的 rpc 接口服务，可以参考官方文档：https://cn.dubbo.apache.org/zh-cn/overview/mannual/java-sdk/advanced-features-and-usage/service/generic-reference/  （在 3.1 有具体的代码示例，可以参考。）
+
+
+
+对于避免硬编码，为每一个 Http 请求都编写 rpc 的泛化调用逻辑不利于扩展且非常繁琐，这里使用了 `代理` 来对 rpc 的泛化调用进行统一地处理，我们选用 `cglib` 来实现代理，`cglib` 可以让一个代理类有多个接口（其实需要让代理类有两个父接口，一个是标准的描述即是固定的，用于我们进行调用，因为只有调用了，才可以通过代理进行拦截，另一个是远程调用的 rpc 的描述接口，这里我们是通过生成字节码来实现的，代码可参考3.5）。
+
+> 在动态代理中，创建 rpc 的描述接口其实并没有用到，只是为了定义一个标准出来。
+
+如下图，泛化调用执行流程为： `http -> 执行cglib动态代理对象方法 -> cglib拦截 -> 执行泛化调用 -> 返回结果`
+
+![1695389934364](img/1695389934364.png)
+
+
+
+### 模块重构
+
+#### 封装数据源
+
+我们将 Dubbo 的 rpc 远程调用服务抽象为数据源，将获取 Dubbo 连接抽象为数据源的连接方法，可以很方便的扩展新的连接方式如其他厂商的 rpc 框架以及 http 服务，还可以对 Dubbo 连接进行池化。
+
+![1695397233182](img/1695397233182.png)
+
+
+
+#### 封装执行器
 
 将远程泛化调用的执行过程给提取出来，放入到执行器中
 
@@ -67,86 +95,133 @@ typora-copy-images-to: img
 
 
 
-
-
-![1690894849284](img/1690894849284.png)
-
+![1695398525960](img/1695398525960.png)
 
 
 
+### 贯穿整个会话流程的配置类以及会话类
 
-### shiro + jwt 认证
+#### 配置类 Configuration
 
-使用 jwt 生成 token，shiro 中进行认证，即将前端传入的 jwt token 使用 jwt 进行解码，如果解码成功，则认证成功，否则，认证失败
+该配置类在整个会话流程中都需要使用，那么肯定是作为单例存在的，之前也已经说了，core 模块我们希望是可以做成组件一样，可以进行独立使用的，所以说不会引入 SpringBoot 依赖，那么这些配置类的单例模式我们是借助创建一个新的 SpringBoot 项目（assist 模块），在 assist 模块中，引入 core 组件，再通过 SpringBoot 的自动配置注解将 Configuration 类给注入到 Spring 的容器中，如下图（assist 模块中的自动配置类）：
 
-
-
-### shiro + jwt 认证整合进 netty
-
-当 http 请求进入 netty 的第一个 handler时，即 `GatewayServerHandler`，在这里我们直接将 http 请求的一些属性给放到管道的属性中（`channel.attr`），并且释放 http 资源（`request.retain()`），在鉴权的 handler 中，取出请求里的 `token` 信息，并且使用 `shiro` 进行认证，如果通过，就放行，否则直接拦截即可
-
-这里鉴权的时候，我们对 `get` 请求就不进行鉴权操作了
-
-
-
-## api-gateway-center
-
-该模块为网关中心，负责启动 springboot 服务，并且注册算例
-
-网关中心维护网关算力节点的库表：gateway_server、gateway_server_detail
-
-RPC 服务注册的库表：application_system、application_interfalce、application_interface_method
-
-
-
-### 唯一索引
-
-在注册 RPC 服务的时候，比如向 application_system 表中注册时，会传入 system_id 字段，为了防止 **重复注册** ，于是将 application_system 表中的 system_id 字段改为 `unique key` 即唯一索引，这样如果重复插入，就会抛出 `DuplicateKeyException` 异常，我们在 Controller 中捕捉到这个异常，提示`发生了重复注册` 即可。
-
-
-
-#### 唯一索引
-
-![1691331548464](img/1691331548464.png)
-
-
-
-#### 重复插入抛出异常 DuplicatedKeyException
-
-![1691331590785](img/1691331590785.png)
-
-
-
-#### Controller 捕捉异常
-
-![1691331610379](img/1691331610379.png)
-
-
-
-
-
-## api-gateway-assist
-
-该模块是一个 `SpringBoot-starter` 
-
-通过 META-INF 文件夹下的 spring.factories 文件，配置加载AutoConfigure类。（SPI）
-
-> 
-
-通过启动 assist 组件，在容器刷新完成之后，会向 center 模块发送 HTTP 请求，注册网关服务，网关服务配置在 assist 模块配置文件中获取，示例如下：
-
-```yaml
-api-gateway:
-  address: http://localhost:8001  # 注册中心；从这里获取接口信息以及完成注册网关操作
-  groupId: 10001                  # 网关分组；每一个网关通信组件都分配一个对应的分组
-  gatewayId: api-gateway-g4       # 网关标识；
-  gatewayName: 电商配送网关         # 网关名称
-  gatewayAddress: 127.0.0.1:7399  # 网关服务；网关的通信服务Netty启动时使用IP和端口
+```java
+@Configuration
+public class GatewayAutoConfig {
+    @Bean
+    public cn.bugstack.gateway.core.session.Configuration gatewayCoreConfiguration(GatewayServiceProperties properties) {
+        cn.bugstack.gateway.core.session.Configuration configuration = new cn.bugstack.gateway.core.session.Configuration();
+        String[] split = properties.getGatewayAddress().split(":");
+        configuration.setHostName(split[0].trim());
+        configuration.setPort(Integer.parseInt(split[1].trim()));
+        return configuration;
+    }
+}
 ```
 
 
 
-向 `center` 模块发送 HTTP 请求，拉取网关的配置（也就是根据 gatewayid 查询该网关下边有哪些服务）
+如下图为 core 模块中，配置类所需要存储的信息：
+
+- Dubbo 连接所需信息：用于连接 Dubbo 获取 rpc 泛化调用对象
+- MapperRegistry：存储 Http 请求的 uri 所对应的 cglib 代理对象，对每个 uri 都创建一个对应的代理对象
+
+![1695450101372](img/1695450101372.png)
+
+
+
+#### 会话类 GatewaySessionFactory
+
+贯穿整个会话流程的是 `GatewaySessionFactory` 类，该类就是用于创建 `GatewaySession` 的，`GatewaySession` 包含了 `Http请求的uri`、`执行器`、`Configuration`
+
+> 这里需要注意的是 GatewaySessionFactory 只有一份，而 GatewaySession 是每一个 Http 请求的 uri 都会对应一份，也就是说每当有 Http 请求进入 Netty 的处理通道时，都会调用 GatewaySessionFactory 的 `openSession()` 方法创建一个新的 GatewaySession 对象，而该对象里的 Configuration 是单例的，包含了所有的代理对象，因此在 GatewaySession  对象创建完成之后，会通过 GatewaySession  里的 Configuration 拿到代理对象，去执行代理对象中的方法，在 Netty 的 ChannelHandler 中调用会话服务的代码如下：
+>
+> ```java
+>   // 2. 调用会话服务
+>   GatewaySession gatewaySession = gatewaySessionFactory.openSession(uri); // 创建一个 GatewaySession
+>   IGenericReference reference = gatewaySession.getMapper(); // 创建 GatewaySession 会传入 Configuration，这里回去 Configuration 中拿到此次请求 uri 所对应的代理对象
+>   SessionResult result = reference.$invoke(args); // 执行代理对象方法，会被 cglib 拦截去进行 rpc 调用
+> ```
+>
+> 
+
+![1695456041511](img/1695456041511.png)
+
+> 具体的会话处理流程为左侧红色部分，后续还可以添加对 Http 请求的鉴权，也是在 Netty 中添加 ChannelHandler 即可。
+
+![1695455732116](img/1695455732116.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+### shiro + jwt 鉴权
+
+这里将鉴权操作放入 Netty 的第一个 ChannelHanlder
+
+使用 jwt 生成 token，shiro 中进行认证，即将前端传入的 jwt token 使用 jwt 进行解码，如果解码成功，则认证成功，否则，认证失败
+
+当 http 请求进入 netty 的第一个 handler时，即 `GatewayServerHandler`，在这里我们直接将 http 请求的一些属性给放到管道的属性中（`channel.attr`），并且释放 http 资源（`request.retain()`），在鉴权的 handler 中，取出请求里的 `token` 信息，并且使用 `shiro` 进行认证，如果通过，就放行，否则直接拦截即可
+
+这里鉴权的时候，我们对 `get` 请求就不进行鉴权操作了（如果查询的是隐私数据，可以对 `get` 请求进行鉴权）
+
+> shiro + jwt 认证具体代码参考3.6
+
+
+
+
+
+### 会话流程总结
+
+> 会话流程中所用类结构如下图所示
+
+- `GatewaySessionFactory`：用于创建 `GatewaySession`，每一个 `Http` 请求进入 `Netty` 之后，都会根据 `uri` 创建一个 `GatewaySession` 对象 
+- `GatewaySession`：包含了 `uri、executor、Configuration` 三个属性，`uri` 为他所处理的 `Http` 请求的路径，用于去 `Configuration` 中取出对应的 `HttpStatement`，`GatewaySession`  
+- `MapperProxyFactory`：用于创建 cglib 代理对象，里边有一个 `Map`，存储 `uri` 到 `代理对象` 的缓存 
+- `MapperProxy`：代理对象的拦截器，里边会执行调用 `GatewaySession` 的 `get()` 方法处理 `Http` 请求，在 `get()` 方法中，会调用 `执行器` 执行远程的 `rpc 接口`  
+- `HttpStatement`：存储 rpc 接口的相关信息，接口信息、方法信息、参数类型、调用对应的uri、调用是否需要权限认证、Http请求类型（get、post..）
+
+![1695707054444](img/1695707054444.png)
+
+> Http 请求在 Netty 的 handler 中调用 rpc 接口的流程
+
+![4、api-core模块会话完整流程 (img/4、api-core模块会话完整流程 (1).png)](D:\Edge下载\4、api-core模块会话完整流程 (1).png)
+
+
+
+
+
+
+
+## 2.2、api-gateway-assist
+
+`assist` 模块是一个 `springboot-starter` 
+
+通常在编写一个 `starter` 时，会通过 `META-INF` 文件夹下的 `spring.factories` 文件，配置加载AutoConfigure类。
+
+> SpringBoot 在启动时，会去依赖的 starter 包中寻找 `resources/META-INF/spring.factories` 文件，再根据文件中配置的 Jar 包去扫描项目依赖的 Jar 包，类似于 Java 的 SPI 机制
+
+![1696063936596](img/1696063936596.png)
+
+文件内容如下：
+
+```yaml
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=cn.bugstack.gateway.assist.config.GatewayAutoConfig
+```
+
+
+
+启动 `assist` 模块，会做哪些事情？
+
+- 在容器刷新完成之后，会向 center 模块发送 HTTP 请求，拉取数据库中存储的 rpc 远程接口的信息（也就是根据 gatewayid 查询该网关下边有哪些服务），将这些接口信息给注册进 `core` 模块中的 `Configuration` 类中。（创建 Dubbo 连接信息、创建 uri 到代理对象的映射、创建 uri 对应的 HttpStatement）
 
 
 
@@ -156,9 +231,11 @@ api-gateway:
 
 
 
-## api-gateway-engine
 
-在 api-gateway-engine 模块中引入了 assist 模块，engine 模块的作用就是引入 assist 模块并进行打包即可。
+
+## 2.3、api-gateway-engine
+
+engine 模块作为一个 SpringBoot 项目，引入了 assist 模块，在启动 engine 项目时，就回去扫描 assist 模块 META-INF/spring.factories 中的自动配置类，注入扫描自动配置类。
 
 对 engine 模块打包后，放到 docker 中，在 docker 中 ip 自动分配，因此，需要修改 center 模块中启动 netty 时的代码，原本是
 
@@ -172,7 +249,7 @@ channelFuture = b.bind(new InetSocketAddress(configuration.getHostName(), config
 channelFuture = b.bind(configuration.getPort()).syncUninterruptibly();
 ```
 
-我们不需要自己再去指定 ip，这是绑定的 ip 为 `0.0.0.0`
+我们不需要自己再去指定 ip，这时绑定的 ip 为 `0.0.0.0`
 
 Netty 通过 bind 绑定的 ip，是指服务端能够监听到目的地 IP 为所绑网卡地址的 IP 包。比如主机中有网卡A和网卡B，程序中 `bind(A)` ，那么操作系统会将发往网卡 A 地址的 IP 包数据，从内核态复制到用户态供用户使用。
 
@@ -180,65 +257,56 @@ Netty 通过 bind 绑定的 ip，是指服务端能够监听到目的地 IP 为�
 
 在 Docker 容器内，感受不到宿主机的网卡 IP，只能感受到 Docker 自己的虚拟网卡（eth0），因此 ip 设置为 127.0.0.0 不能正常启动 netty 服务，
 
-
-
-engine 中引入了 assist 模块，assist 模块引入了 core netty通信模块，将 engine 模块打包运行，即可运行 engine、assist、core 三个模块
-
-center 注册中心另外再启动
+engine 中引入了 assist 模块，assist 模块引入了 core 模块，将 engine 模块打包运行。
 
 
 
 
 
-## api-gateway-sdk
-
-在 sdk 中定义注解，在 rpc 生产者的服务中引入 sdk，并且使用 sdk 定义的注解，在 sdk 中会扫描注解，并且将注解标注的接口方法信息注册到注册中心去
-
-
-
-在 sdk 模块中，会去扫描方法上的注解，并将方法注册到注册中心（center 模块）去，那么在注册之后，需要去通知 assist 模块拉取最新的方法，因此这里使用 Redis 的发布和订阅
-
-
-
-assist-04 + center-05 没有问题
-
-assist-05 + center-06 有问题（拉取不到application-system）
 
 
 
 
+## 2.4、api-gateway-center
 
-### 测试 assist 自动拉取新注册的接口
+该模块主要用于操作数据库，提供其他模块对 rpc 接口信息进行注册和拉取。
 
-首先启动 assist 服务，并启动zookeeper服务，再启动 center 模块，保证可以向数据库中注册
+### 唯一索引
 
-首先清空 application_interface, application_interface_method, application_system 3张表
+在注册 RPC 服务的时候，比如向 application_system 表中注册时，会传入 system_id 字段，为了防止 **重复注册** ，于是将 application_system 表中的 system_id 字段改为 `unique key` 即唯一索引，这样如果重复插入，就会抛出 `DuplicateKeyException` 异常，我们在 Controller 中捕捉到这个异常，提示`发生了重复注册` 即可。
 
-访问接口http://localhost:7399/wg/activity/sayHi  （POST） 会失败
+> 唯一索引
 
-在 api-gateway-test-provider-interfaces 项目中引入 api-gateway-sdk-02，并启动，此时可以观察 assist 模块的日志，会自动拉去配置
+![1691331548464](img/1691331548464.png)
 
-访问接口http://localhost:7399/wg/activity/sayHi  （POST） 会成功
+> 重复插入抛出异常 DuplicatedKeyException
+
+![1691331590785](img/1691331590785.png)
 
 
 
-## Windows 网络调试工具
+> Controller 捕捉异常
 
-NetAssist3.8.2 用于调试 nginx 发送请求
+![1691331610379](img/1691331610379.png)
 
-## Mac网络调试工具
 
-Socket Debugger
 
-# 项目模块梳理
 
-asssit 模块包含了 core 模块，core 模块用于 netty 通讯，作为网关的调用入口
 
-engine 模块包含了 assist 模块，没有其他的功能，只是将 engine 模块打包，放入 docker 运行即可
 
-sdk 模块是去扫描方法上的注解，将扫描到的方法远程调用 center 模块的注册方法，注册到数据库中去
 
-center 模块作为网关的注册中心，提供了对数据库的操作
+
+
+## 2.5、api-gateway-sdk
+
+sdk 模块主要进行的任务为：
+
+- sdk 模块作为一个依赖，并且定义了注解，在 `被调用模块` 中引入 sdk 模块，使用该模块提供的注解写在 rpc 接口上，之后在启动 `被调用模块` 时，rpc 接口的信息会被扫描，并且调用 center 模块中的方法，注册到数据库中去
+- 在 sdk 模块中会去调用 center 模块的方法向数据库中注册 rpc 接口信息，在注册之后，需要使用 `Redis的发布和订阅` 功能保证 assist 模块可以从数据库中拉取到最新的 rpc 接口信息。
+
+
+
+
 
 
 
@@ -296,15 +364,15 @@ center 模块作为网关的注册中心，提供了对数据库的操作
 
 
 
-# 技术亮点
+# 3、技术细节
 
 
 
-## 网关算力模块（engine、assist、core）
+## 3.1、如何调用远程服务？
 
-### 1、如何调用远程服务？
+### 服务提供者
 
-步骤1：首先启动一个服务模块（test模块），该模块作为被调用方，使用 Dubbo 将接口服务暴露给消费者进行使用。通过 `@Service` 注解将服务暴露出去
+步骤1：首先启动一个服务模块（provider 模块），该模块作为被调用方，使用 Dubbo 将接口服务暴露给消费者进行使用。通过 `@Service` 注解将服务暴露出去
 
 ```java
 package cn.bugstack.gateway.interfaces;
@@ -337,7 +405,7 @@ public class ActivityBooth implements IActivityBooth {
 
 
 
-test 模块的 yaml 配置如下：（需要启动 zookeeper）
+provider 模块的 yaml 配置如下：（需要启动 zookeeper）
 
 ```yaml
 dubbo:
@@ -355,6 +423,73 @@ dubbo:
 ```
 
 
+
+引入依赖如下：
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>fastjson</artifactId>
+        <version>1.2.58</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.8</version>
+    </dependency>
+    <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.dubbo</groupId>
+        <artifactId>dubbo</artifactId>
+        <version>2.7.5</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.dubbo</groupId>
+        <artifactId>dubbo-spring-boot-starter</artifactId>
+        <version>2.7.5</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>3.4.13</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>4.0.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>4.0.1</version>
+    </dependency>
+    <!-- 服务注册组件 -->
+    <dependency>
+        <groupId>cn.bugstack.gateway</groupId>
+        <artifactId>api-gateway-sdk</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+```
+
+
+
+### 服务消费者
 
 步骤2：新创建一个模块进行 rpc 调用
 
@@ -400,13 +535,14 @@ public class RPCTest {
     public void test_rpc() {
 
         ApplicationConfig application = new ApplicationConfig();
+        // 创建 ApplicationConfig
         application.setName("api-gateway-test");
         application.setQosEnable(false);
-
+   	    // 创建注册中心配置
         RegistryConfig registry = new RegistryConfig();
         registry.setAddress("zookeeper://127.0.0.1:2181");
         registry.setRegister(false);
-
+        // 创建服务引用配置
         ReferenceConfig<GenericService> reference = new ReferenceConfig<>();
         reference.setInterface("cn.bugstack.gateway.rpc.IActivityBooth");
         reference.setVersion("1.0.0");
@@ -421,6 +557,7 @@ public class RPCTest {
         ReferenceConfigCache cache = ReferenceConfigCache.getCache();
         GenericService genericService = cache.get(reference);
 
+        // 第一个参数为方法名，第二个参数为参数全类名（String数组），第三个参数为需要传入的参数（Object数组）
         Object result = genericService.$invoke("sayHi", new String[]{"java.lang.String"}, new Object[]{"world"});
 
         System.out.println(result);
@@ -433,7 +570,7 @@ public class RPCTest {
 
 
 
-### 2、如何接受 http 请求并调用远程服务？
+## 3.2、如何接受 http 请求并调用远程服务？
 
 首先使用 Netty 接受 Http 请求，在 Netty 的 handler 中进行鉴权、解析参数、调用服务3个操作。
 
@@ -542,7 +679,7 @@ public class CglibTest implements MethodInterceptor {
 
 
 
-### 3、注解如何扫描rpc方法提供方的接口并加入数据库中？
+## 3.3、注解如何扫描rpc方法提供方的接口并加入数据库中？
 
 定义注解 `@ApiProducerClazz、@ApiProducerMethod`，定义一个类实现 `BeanPostProcessor`，并且覆盖`postProcessAfterInitialization()` 方法，在这个方法中就可以扫描每个初始化的 Bean，通过解析我们自定义的注解，就可以扫描我们需要注册的 rpc 方法了。
 
@@ -562,7 +699,7 @@ public class GatewaySDKApplication implements BeanPostProcessor {
 
 
 
-### 4、如何动态上线 rpc 方法？
+## 3.4、如何动态上线 rpc 方法？
 
 网关算力节点如果需要调用 rpc 方法，就需要去数据库中将需要调用的 rpc 方法名称、接口名、参数类型拉取下来，知道了 rpc 方法的这些信息，才可以进行调用，那么如果新添加了一个 rpc 提供方，如何实现网管算力节点去动态拉取新添加的 rpc 方法的信息呢？
 
@@ -577,3 +714,421 @@ public class GatewaySDKApplication implements BeanPostProcessor {
 
 
 http
+
+
+
+## 3.5、生成rpc接口的字节码
+
+
+
+```java
+package cn.bugstack.gateway.core.bind;
+
+import cn.bugstack.gateway.core.mapping.HttpStatement;
+import cn.bugstack.gateway.core.session.GatewaySession;
+import net.sf.cglib.core.Signature;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.InterfaceMaker;
+import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
+import org.apache.curator.framework.recipes.locks.InterProcessSemaphoreV2;
+import org.objectweb.asm.Type;
+
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class MapperProxyFactory implements MethodInterceptor {
+
+    public MapperProxyFactory(){}
+
+    public static void main(String[] args) {
+        MapperProxyFactory mapperProxyFactory = new MapperProxyFactory();
+        mapperProxyFactory.testCglib();
+    }
+    public void testCglib() {
+        InterfaceMaker interfaceMaker = new InterfaceMaker();
+        /**
+         * 第一个参数为接口的方法名
+         * 第二个参数为参数类型
+         * 第三个参数为返回值类型
+         */
+        interfaceMaker.add(new Signature("test", Type.getType(String.class), new Type[]{Type.getType(String.class)}), null);
+        Class<?> interfaceClass = interfaceMaker.create();
+        // 代理对象
+        Enhancer enhancer = new Enhancer();
+        enhancer.setSuperclass(Object.class);
+        // IGenericReference 统一泛化调用接口
+        // interfaceClass    根据泛化调用注册信息创建的接口，建立 http -> rpc 关联
+        enhancer.setInterfaces(new Class[]{IGenericReference.class, interfaceClass});
+        // setCallback 设置拦截方法
+        enhancer.setCallback(this);
+        IGenericReference o = (IGenericReference) enhancer.create();
+    }
+
+    @Override
+    public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
+        System.out.println("拦截");
+        return null;
+    }
+}
+```
+
+
+
+
+
+## 3.6、shiro+jwt 认证
+
+### 1、先引入依赖
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.apache.shiro/shiro-core -->
+<dependency>
+    <groupId>org.apache.shiro</groupId>
+    <artifactId>shiro-core</artifactId>
+    <version>1.3.2</version>
+</dependency>
+<!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt</artifactId>
+    <version>0.9.1</version>
+</dependency>
+```
+
+
+
+### 2、整合 shiro
+
+目录结构如下：
+
+![1695474790839](img/1695474790839.png)
+
+
+
+重写 shiro 的 Token 以及 Realm：
+
+> GatewayAuthorizingRealm.java
+
+```java
+package com.example.nginxtest1.authorization;
+
+import io.jsonwebtoken.Claims;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.AuthenticationInfo;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.SimpleAuthenticationInfo;
+import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.realm.AuthorizingRealm;
+import org.apache.shiro.subject.PrincipalCollection;
+
+public class GatewayAuthorizingRealm extends AuthorizingRealm {
+
+    @Override
+    public Class<?> getAuthenticationTokenClass() {
+        return GatewayAuthorizingToken.class;
+    }
+
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principalCollection) {
+        // 暂时不需要做授权处理
+        return null;
+    }
+
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+        try {
+            // 验证解析是否报错
+            Claims claims = JwtUtil.decode(((GatewayAuthorizingToken) token).getJwt());
+            // 验证签发人是否匹配
+            if (!token.getPrincipal().equals(claims.getSubject())) throw new AuthenticationException("无效令牌");
+        } catch (Exception e) {
+            throw new AuthenticationException("无效令牌");
+        }
+        return new SimpleAuthenticationInfo(token.getPrincipal(), token.getCredentials(), this.getName());
+    }
+
+}
+```
+
+
+
+> GatewayAuthorizingToken
+
+```java
+package com.example.nginxtest1.authorization;
+
+import org.apache.shiro.authc.AuthenticationToken;
+
+public class GatewayAuthorizingToken implements AuthenticationToken {
+
+    private static final long serialVersionUID = 1L;
+
+    // 通信管道ID
+    private String uId;
+
+    // JSON WEB TOKEN
+    private String jwt;
+
+    public GatewayAuthorizingToken() {
+    }
+
+    public GatewayAuthorizingToken(String uId, String jwt) {
+        this.uId = uId;
+        this.jwt = jwt;
+    }
+
+    @Override
+    public Object getPrincipal() {
+        return uId;
+    }
+
+    @Override
+    public Object getCredentials() {
+        return this.jwt;
+    }
+
+    public String getJwt() {
+        return jwt;
+    }
+
+    public void setJwt(String jwt) {
+        this.jwt = jwt;
+    }
+
+}
+```
+
+
+
+### 3、编写 JWT 工具类
+
+JWT 工具类进行编码和解码
+
+> JwtUtil
+
+```java
+package com.example.nginxtest1.authorization;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+public class JwtUtil {
+
+    private static final String signingKey = "B*B^5Fe";
+
+    /**
+     * 生成 JWT Token 字符串
+     *
+     * @param issuer    签发人
+     * @param ttlMillis 有效期
+     * @param claims    额外信息
+     * @return Token
+     */
+    public static String encode(String issuer, long ttlMillis, Map<String, Object> claims) {
+        if (null == claims) {
+            claims = new HashMap<>();
+        }
+
+        // 签发时间（iat）：荷载部分的标准字段之一
+        long nowMillis = System.currentTimeMillis();
+        Date now = new Date(nowMillis);
+
+        // 签发操作
+        JwtBuilder builder = Jwts.builder()
+                // 荷载部分
+                .setClaims(claims)
+                // 签发时间
+                .setIssuedAt(now)
+                // 签发人；类似 userId、userName
+                .setSubject(issuer)
+                // 设置生成签名的算法和秘钥
+                .signWith(SignatureAlgorithm.HS256, signingKey);
+
+        if (ttlMillis >= 0) {
+            long expMillis = nowMillis + ttlMillis;
+            Date exp = new Date(expMillis);
+            // 过期时间（exp）：荷载部分的标准字段之一，代表这个 JWT 的有效期。
+            builder.setExpiration(exp);
+        }
+
+        return builder.compact();
+    }
+
+    public static Claims decode(String token) {
+        return Jwts.parser()
+                // 设置签名的秘钥
+                .setSigningKey(signingKey)
+                // 设置需要解析的 jwt
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+}
+```
+
+
+
+### 4、shiro 认证服务实现类
+
+在这里进行真正的认证服务
+
+> IAuth
+
+```java
+public interface IAuth {
+
+    boolean validate(String id, String token);
+
+}
+```
+
+
+
+> AuthService
+
+在 `validate()` 中进行 `subject.login` 之后，就会进入到我们自定义的 Realm 的认证逻辑中，即 `GatewayAuthorizingRealm # doGetAuthenticationInfo` ，在这里会解析请求附带的
+
+```java
+public class AuthService implements IAuth {
+
+    private Subject subject;
+
+    public AuthService() {
+        // 1. 获取 SecurityManager 工厂，此处使用 shiro.ini 配置文件初始化 SecurityManager
+        Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");
+        // 2. 得到 SecurityManager 实例 并绑定给 SecurityUtils
+        SecurityManager securityManager = factory.getInstance();
+        SecurityUtils.setSecurityManager(securityManager);
+        // 3. 得到 Subject 及 Token
+        this.subject = SecurityUtils.getSubject();
+    }
+
+    @Override
+    public boolean validate(String id, String token) {
+        try {
+            // 身份验证
+            subject.login(new GatewayAuthorizingToken(id, token));
+            // 返回结果
+            return subject.isAuthenticated();
+        } finally {
+            // 退出
+            subject.logout();
+        }
+    }
+}
+```
+
+
+
+### 5、测试
+
+下边测试类引入了 `junit` 
+
+```xml
+<dependency>
+    <groupId>junit</groupId>
+    <artifactId>junit</artifactId>
+    <version>4.13.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+
+
+```java
+public class ShiroTest {
+
+    private final static Logger logger = LoggerFactory.getLogger(ShiroTest.class);
+
+    @Test
+    public void test_auth_service() {
+        IAuth auth = new AuthService();
+        boolean validate = auth.validate("xiaofuge", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4aWFvZnVnZSIsImV4cCI6MTY2NjQwNDAxMiwiaWF0IjoxNjY1Nzk5MjEyLCJrZXkiOiJ4aWFvZnVnZSJ9.Vs-ObO5OF2pYr7jkt0N4goq0hErOZNdyqfacHzbkfHM");
+        System.out.println(validate ? "验证成功" : "验证失败");
+    }
+
+    // 在这里生成新的 token，再使用上边的方法测试 token
+    @Test
+    public void test_jwt() {
+        String issuer = "xiaofuge";
+        long ttlMillis = 7 * 24 * 60 * 60 * 1000L;
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("key", "xiaofuge");
+
+        // 编码
+        String token = JwtUtil.encode(issuer, ttlMillis, claims);
+        System.out.println(token);
+
+        // 解码
+        Claims parser = JwtUtil.decode(token);
+        System.out.println(parser.getSubject());
+    }
+
+}
+```
+
+
+
+### 6、shiro + jwt认证常见问题
+
+> 1. 捕获 jwt 解析异常，因为前端传入的 jwt token 可能是上次登陆时存储的，解析时可能报错，如果我们不自己捕获到，则前端会爆500错误
+
+这里只贴出部分关键代码，主要是捕获token超时和不合法的异常。
+
+```java
+ if (!StringUtils.isBlank(token)) {
+      try {
+          JwtParser parser = Jwts.parser();
+          // 解析token的SigningKey必须和生成token时设置密码一致
+          parser.setSigningKey("JavaGPT");
+          /**
+           * 如果token检验通过（密码正确，有效期内）则正常执行，否则抛出异常
+           * 前端浏览器携带的 token 可能是上次登陆时存储下来的，因此需要捕获到异常，并抛出
+           */
+          Jws<Claims> claimsJws = parser.parseClaimsJws(token);
+          Integer userId = (Integer) claimsJws.getBody().get("userId");
+          if (userId == null) {
+              filterChain.doFilter(request, response);
+          }
+          UsernamePasswordAuthenticationToken authenticationToken =
+                  new UsernamePasswordAuthenticationToken(userId,null,null);
+          SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+      } catch (ExpiredJwtException e) {
+          ResultBody resultVO = new ResultBody(402, "登录过期，请重新登录！", null);
+          doResponse(response, resultVO);
+      } catch (UnsupportedJwtException e) {
+          ResultBody resultVO = new ResultBody(401, "Token不合法，请自重！", null);
+          doResponse(response, resultVO);
+      } catch (Exception e) {
+          ResultBody resultVO = new ResultBody(401, "请先登录！", null);
+          doResponse(response, resultVO);
+      }
+}
+
+    /**
+     * 没带token或者检验失败响应给前端
+     *
+     * @param response
+     * @param resultVO
+     * @throws IOException
+     */
+    private void doResponse(HttpServletResponse response, ResultBody resultVO) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("utf-8");
+        PrintWriter out = response.getWriter();
+        String s = new ObjectMapper().writeValueAsString(resultVO);
+        out.print(s);
+        out.flush();
+        out.close();
+    }
+
+```
+

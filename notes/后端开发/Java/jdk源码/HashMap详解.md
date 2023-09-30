@@ -64,7 +64,7 @@ transient int modCount;
 
 ```java
 public HashMap(int initialCapacity, float loadFactor) {
- //此处对传入的初始容量进行校验，最大不能超过MAXIMUM_CAPACITY = 1<<30(2^30)
+    // 此处对传入的初始容量进行校验，最大不能超过MAXIMUM_CAPACITY = 1<<30(2^30)
     if (initialCapacity < 0)
         throw new IllegalArgumentException("Illegal initial capacity: " +
                                            initialCapacity);
@@ -73,11 +73,8 @@ public HashMap(int initialCapacity, float loadFactor) {
     if (loadFactor <= 0 || Float.isNaN(loadFactor))
         throw new IllegalArgumentException("Illegal load factor: " +
                                            loadFactor);
-
     this.loadFactor = loadFactor;
-    threshold = initialCapacity;
-
-    init();//init方法在HashMap中没有实际实现，不过在其子类如 linkedHashMap中就会有对应实现
+    this.threshold = tableSizeFor(initialCapacity);
 }
 ```
 
@@ -186,7 +183,7 @@ indexOf()方法传入两个参数，(hash,table.length)其中table.length一定�
 
 `key --> hashCode() -->hashcode -->hash()-->h-->indexOf(h,length)-->存储下标`
 
-##  尾插法
+##  jdk1.8 尾插法
 
 在jdk1.8之后，链表的插入方式由头插法变为了尾插法
 
@@ -272,6 +269,27 @@ Node(int hash, K key, V value, Node<K,V> next) {
 }
 
 ```
+
+
+
+计算hash值
+
+```java
+static final int hash(Object key) {
+    int h;
+    /**
+      在计算hash值的时候，根据key的hashCode来计算，并不直接取hashCode：
+      先将hashCode赋值给h，之后再让 h 与 h>>>16 进行异或运算，这个是什么意思呢？
+      是为了让hash值的计算更加平衡，hash是int类型，也就是32为
+      h >>> 16 是无符号右移16位，让h的高16位与低16位都参与运算，这样计算出来的hash值更加平衡
+      # 在上边 putVal() 中计算下标 i 的时候，是让 i = (n-1)&hash，这样计算下标的时候只取
+      了hash的后k位，所以让让hash值的高16位与低16位都参与运算，为了在取hash的低位的时候更加平衡
+    */
+    return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+}
+```
+
+
 
 
 
