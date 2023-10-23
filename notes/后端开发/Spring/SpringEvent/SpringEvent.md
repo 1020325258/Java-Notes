@@ -6,6 +6,8 @@ typora-copy-images-to: imgs
 
 参考文章：https://juejin.cn/post/7230646780455059515
 
+> 待完善
+
 Spring Event 其实是一个观察者设计模式，当一个 Bean 处理完任务之后，希望通知其它 Bean 或者说一个 Bean 想观察监听另一个Bean 的行为。
 
 
@@ -117,10 +119,4 @@ public class MallEventManager{
 ```
 
 
-
-4. 定义事件具体类
-
-```java'
-
-```
 

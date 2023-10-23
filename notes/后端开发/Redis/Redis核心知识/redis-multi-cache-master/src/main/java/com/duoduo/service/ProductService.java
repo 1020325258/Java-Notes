@@ -61,7 +61,7 @@ public class ProductService {
     @Transactional
     public Product update(Product product) {
         Product productResult = null;
-        //RLock productUpdateLock = redisson.getLock(LOCK_PRODUCT_UPDATE_PREFIX + product.getId());
+//        RLock productUpdateLock = redisson.getLock(LOCK_PRODUCT_UPDATE_PREFIX + product.getId());
         RReadWriteLock productUpdateLock = redisson.getReadWriteLock(LOCK_PRODUCT_UPDATE_PREFIX + product.getId());
         RLock writeLock = productUpdateLock.writeLock();
         //加分布式写锁解决缓存双写不一致问题
