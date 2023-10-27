@@ -30,6 +30,36 @@ ENTRYPOINT ["node", "index.js"]
 
 
 
+## default.conf
+
+```conf
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  106.52.239.29;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 将 http://ip:port/api/back/{xxxx} 映射为 http://106.52.239.29:8088/{xxxx}
+    location /api/back/ {
+            proxy_pass   http://106.52.239.29:8088/;
+     }
+
+        location /api/base/ {
+            proxy_pass   http://106.52.239.29:8089/;
+     }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+
 
 
 
@@ -856,3 +886,325 @@ EXPOSE 48080
 CMD java ${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom -jar app.jar
 ```
 
+
+
+
+
+
+
+# 7、部署掉块项目
+
+## mysql
+
+```bash
+docker run -id --name=oilwell_mysql -p 3306:3306 \
+--restart=always \
+-v /root/mysql/logs:/logs \
+-v /root/mysql/data:/var/lib/mysql \
+-v /root/mysql/conf:/etc/mysql/conf.d \
+-e MYSQL_ROOT_PASSWORD=oilwell123456 mysql:5.7
+```
+
+
+
+## redis
+
+```bash
+docker run \
+ -d \
+ -p 6360:6379 \
+ --privileged=true \
+ --name oillwell_redis \
+ --restart=always \
+ -v /root/redis/data:/data \
+ -v /root/redis/redis.conf:/etc/redis.conf \
+ redis:6.2.6 redis-server /etc/redis.conf \
+ --requirepass 'oilwell123456'
+```
+
+
+
+## 后端
+
+### dockerfile
+
+```bash
+#基础镜像
+FROM openjdk:8-jdk-alpine
+
+#添加文件
+ADD oilwell-stone-0.0.1-SNAPSHOT.jar /usr/local
+RUN chmod u+x /usr/local/oilwell-stone-0.0.1-SNAPSHOT.jar
+#挂载目录到容器
+#VOLUME ["/data"]
+#环境变量设置
+#ENV #开放端口
+EXPOSE 8082
+#启动时执行的命令
+CMD ["/bin/bash"]
+#启动时执行的命令
+ENTRYPOINT ["java","-jar","/usr/local/oilwell-stone-0.0.1-SNAPSHOT.jar"]
+```
+
+
+
+### script
+
+```bash
+#!/bin/bash 
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t oilwell:01 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop oilwell
+docker rm oilwell
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name oilwell -p 8082:8082 -d oilwell:01
+```
+
+
+
+
+
+## 前端
+
+### default.conf
+
+```bash
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  218.95.37.160;
+
+    location / {
+        # 填写 docker0 网卡地址：通过 ip a 查看，不用再去公网绕一圈
+        proxy_pass   http://172.17.0.1:8082/;
+     }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+
+
+
+### dockerfile
+
+```bash
+# 设置基础镜像，这里使用最新的nginx镜像，前面已经拉取过了
+FROM nginx
+#执行命令，主要用来安装相关的软件
+
+RUN rm /etc/nginx/conf.d/default.conf
+ 
+ADD default.conf /etc/nginx/conf.d/
+
+# 设置时区
+RUN rm -f /etc/localtime \
+&& ln -sv /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+&& echo "Asia/Shanghai" > /etc/timezone
+
+#添加文件
+# 将dist文件中的内容复制到 /usr/share/nginx/html/ 这个目录下面
+COPY dist/  /usr/share/nginx/html/
+```
+
+
+
+### script
+
+```bash
+#!/bin/bash
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t oilwell-front:1.0 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop oilwell-front
+docker rm oilwell-front
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name oilwell-front -d -p 8080:80  oilwell-front:1.0
+```
+
+
+
+
+
+
+
+# 8、education
+
+## education-front
+
+![1698304454157](imgs/1698304454157.png)
+
+### default.conf
+
+```bash
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  106.52.239.29;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/back/ {
+            proxy_pass   http://106.52.239.29:8088/;
+     }
+
+        location /api/base/ {
+            proxy_pass   http://106.52.239.29:8089/;
+     }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+
+### Dockerfile
+
+```bash
+# 设置基础镜像，这里使用最新的nginx镜像，前面已经拉取过了
+FROM nginx
+#作者
+MAINTAINER xuwangcheng 2631416434@qq.com
+#执行命令，主要用来安装相关的软件
+
+RUN rm /etc/nginx/conf.d/default.conf
+ 
+ADD default.conf /etc/nginx/conf.d/
+
+# 设置时区
+RUN rm -f /etc/localtime \
+&& ln -sv /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+&& echo "Asia/Shanghai" > /etc/timezone
+
+
+#添加文件
+# 将dist文件中的内容复制到 /usr/share/nginx/html/ 这个目录下面
+COPY dist/  /usr/share/nginx/html/
+```
+
+### Script
+
+```bash
+#!/bin/bash
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t education-front:1.0 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop front
+docker rm front
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name front -d -p 8080:80  education-front:1.0
+```
+
+### start.sh
+
+```bash
+#!/bin/bash
+docker pull bubaiwantong/front:latest
+
+docker tag docker.io/bubaiwantong/front:latest front:latest
+
+docker stop front
+
+docker rm front
+
+docker run --name front -p 8080:80 --restart=always  -d front:latest
+
+docker image prune -af
+```
+
+## education-back-server
+
+![1698304445872](imgs/1698304445872.png)
+
+### Dockerfile
+
+```bash
+#基础镜像
+FROM openjdk:21-jdk-alpine
+# FROM testamento/jdk20
+
+#安装字体
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/* && mkfontscale && mkfontdir && fc-cache
+RUN apk add --update ttf-dejavu fontconfig && rm -rf /var/cache/apk/*
+
+#添加文件
+ADD back-0.0.1-SNAPSHOT.jar /usr/local
+RUN chmod u+x /usr/local/back-0.0.1-SNAPSHOT.jar
+
+#设置时区
+RUN rm -f /etc/localtime \
+&& ln -sv /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+&& echo "Asia/Shanghai" > /etc/timezone
+
+#挂载目录到容器
+#VOLUME ["/data"]
+#环境变量设置
+#ENV #开放端口
+EXPOSE 8088
+#启动时执行的命令
+CMD ["/bin/bash"]
+#启动时执行的命令
+ENTRYPOINT ["java","-jar","/usr/local/back-0.0.1-SNAPSHOT.jar"]
+```
+
+### script
+
+```bash
+#!/bin/bash 
+
+#构建docker镜像
+echo "========================================正在构建镜像================================="
+docker build -t back:01 .
+
+# 停止并删除容器
+echo "========================================正在删除容器================================="
+docker stop back
+docker rm back
+
+# 运行容器
+echo "========================================正在创建新容器================================="
+docker run --name back -p 8088:8088 -d back:01
+```
+
+### start.sh
+
+```bash
+#!/bin/bash
+docker pull bubaiwantong/back:latest
+
+docker tag docker.io/bubaiwantong/back:latest back:latest
+
+docker stop back
+
+docker rm back
+
+docker run --name back -p 8088:8088 -d back:latest
+
+docker image prune -af
+```

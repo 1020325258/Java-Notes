@@ -33,13 +33,14 @@
             // 仓库地址，点击右上角的Github章鱼猫头像会跳转到此地址
             repo: 'https://gitee.com/star_wwp/learning-notes',
             // 侧边栏支持，默认加载的是项目根目录下的_sidebar.md文件
-            // loadSidebar: './config/_sidebar.md',
+            loadSidebar: true,
+            // subMaxLevel: 2,
             // 导航栏支持，默认加载的是项目根目录下的_navbar.md文件
             loadNavbar: './config/_navbar.md',
             // 封面支持，默认加载的是项目根目录下的_coverpage.md文件
             // coverpage: './config/_coverpage.md',
             // 最大支持渲染的标题层级
-            maxLevel: 5,
+            // maxLevel: 5,
             auto2top: true,
             // 自定义侧边栏后默认不会再生成目录，设置生成目录的最大层级（建议配置为2-4）
             subMaxLevel: 5,
@@ -52,6 +53,15 @@
                 fontsize:'0.9em',
                 color:'rgb(90,90,90)',
                 language:'chinese'
+            },
+            // 页面右侧toc
+            // toc: {
+            //     tocMaxLevel: 5,
+            //     target: "h2, h3, h4, h5, h6",
+            // },
+            hideCode: { // 代码折叠
+                scroll: false, // Enable scrolling
+                height: 500 // Max height
             },
             /*搜索相关设置*/
             search: {
@@ -71,9 +81,12 @@
     </script>
     <!-- docsify的js依赖 -->
     <script src="./lib/docsify.min.js"></script>
-    <!-- <script src="./lib/docsify-pagination.min.js"></script> -->
+    <script src="./lib/hide-code.min.js"></script>
+    <script src="./lib/docsify-progress.min.js"></script>
     <!-- emoji表情支持 -->
     <script src="./lib/emoji.min.js"></script>
+    <!-- 页面右侧 TOC -->
+    <script src="./lib/docsify-plugin-toc.min.js"></script>
     <!-- 图片放大缩小支持 -->
     <script src="./lib/zoom-image.min.js"></script>
     <!-- 搜索功能支持 -->

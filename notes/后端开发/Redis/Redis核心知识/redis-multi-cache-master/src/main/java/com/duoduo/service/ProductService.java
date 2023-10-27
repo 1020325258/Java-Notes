@@ -53,6 +53,7 @@ public class ProductService {
 
     @Transactional
     public Product create(Product product) {
+//        redisson.
         Product productResult = productDao.create(product);
         redisUtil.set(RedisKeyPrefixConst.PRODUCT_CACHE + productResult.getId(), JSON.toJSONString(productResult));
         return productResult;
