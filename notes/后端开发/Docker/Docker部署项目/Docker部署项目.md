@@ -951,7 +951,7 @@ ENTRYPOINT ["java","-jar","/usr/local/oilwell-stone-0.0.1-SNAPSHOT.jar"]
 ### script
 
 ```bash
-#!/bin/bash 
+#!/bin/bash
 
 #构建docker镜像
 echo "========================================正在构建镜像================================="
@@ -964,7 +964,7 @@ docker rm oilwell
 
 # 运行容器
 echo "========================================正在创建新容器================================="
-docker run --name oilwell -p 8082:8082 -d oilwell:01
+docker run --name oilwell -p 8082:8082 -v /usr/local/oilwell_stone/data/img_file:/usr/local/oilwell_stone/data/img_file -d oilwell:01
 ```
 
 

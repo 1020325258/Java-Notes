@@ -6,6 +6,53 @@ typora-copy-images-to: images
 
 # Simple-Rpc 项目文档
 
+
+
+## 项目介绍
+
+- 介绍一下你的 simple-rpc 项目吧？
+
+> 使用 processon 画一张项目的流程图，通过屏幕共享讲述
+
+好的，simple-rpc 项目主要是提供服务的远程调用功能，核心功能基于 Netty 进行实现，被调用方通过自定义注解可以将本地服务暴露出去，将服务信息以及被调用方的 Netty 通信地址给注册到 Zookeeper 中，当消费方需要使用时，会远程调用并返回结果，整个过程中用户感知不到。
+
+**服务暴露以及远程服务调用过程如下：**
+
+项目的核心功能在于如何通过注解去实现远程调用，就比如在一个 `HelloService` 对象上添加 `@RpcReference` 注解，表示这是一个远程调用的对象
+
+那么在这个底层是通过 Spring 来进行处理的，我们通过 Spring 的扩展点 `ImportBeanDefinitionRegistrar` 来实现对远程调用对象的注册，在 `ImportBeanDefinitionRegistrar` 中会自定义扫描器去扫描添加了 `@Component、@RpcService` 注解的类，在将这些类扫描到 Spirng 容器之后，使用了 `Bean 的后置处理器` ，将 Bean 中带有 `@RpcReference` 注解的字段创建为远程调用的代理对象，这个远程调用的底层就是当我们去调用 `helloService.say()` 方法时，此时会进入到这个代理对象的拦截器 `InvocationHandler` 中，在这个拦截器中会去根据我们调用的方法的信息去 Zookeeper 中查询需要调用方法的节点，比如 `com.zqy.ClientTest.Server.HelloServicegroup1version1/192.168.1.3:9999` 在 zookeeper 中会使用`方法的全限定类名 + 方法所在服务的 Netty 地址` 作为节点进行存储，知道了被调用方的 Netty 地址，就可以向被调用方发送调用请求，被调用方执行方法之后，将执行结果给包装返回。
+
+在 Bean 的后置处理器中，还对标有 `@RpcService` 的 Bean 进行服务暴露，将其注册到 Zookeeper 中，节点命名为：`方法名+服务地址`
+
+**负载均衡使用如下：**
+
+并且这里 zookeeper 的命名方式还有一个好处，就是同一个方法下边可以有不同的 Netty 服务地址，我们可以在调用方拿到多个 Netty 地址，并进行`负载均衡`调用
+
+**SPI 机制使用如下：**
+
+为了动态替换方法的实现，降低对代码的侵入性，引入了 SPI 机制，比如我们的负载均衡可以有多种实现，可以轮询也可以加权轮询，服务注册也可以有多种实现，目前是在 Zookeeper 中注册服务，如果后边使用其他的注册服务，有了 SPI 机制，可以在`配置文件中就切换`负载均衡、服务注册的实现，而不用去代码中修改。
+
+**Netty 编码/解码：**
+
+我们自定义了传输协议，通过设计协议，就可以定义需要传输哪些数据，并且还会规定每一种类型的数据应该占用多少字节，这样在收到二进制数据之后，就可以正确解析到我们所需要的数据
+
+```bash
+ *   0     1     2     3     4        5     6     7     8         9          10      11     12  13  14   15 16
+ *   +-----+-----+-----+-----+--------+----+----+----+------+-----------+-------+----- --+-----+-----+-------+
+ *   |   magic   code        |version | full length         | messageType| codec|compress|    RequestId       |
+ *   +-----------------------+--------+---------------------+-----------+-----------+-----------+------------+
+ *   |                                                                                                       |
+ *   |                                         body                                                          |
+ *   |                                                                                                       |
+ *   |                                        ... ...                                                        |
+ *   +-------------------------------------------------------------------------------------------------------+
+ * 4B  magic code（魔法数）   1B version（版本）   4B full length（消息长度）    1B messageType（消息类型）
+ * 1B compress（压缩类型） 1B codec（序列化类型）    4B  requestId（请求的Id）
+ * body（object类型数据）
+```
+
+魔法数主要是用来筛选服务端的数据包，可以根据魔法数迅速判断该数据包是否是遵从我们自定义的协议的
+
 ## 1、如何结合 Spring 进行使用？
 
 该项目提供了自定义注解：
@@ -82,15 +129,15 @@ public @interface RpcService {
 
 #### 2、定义 BeanDefinition 注册器：CustomScannerRegistrar
 
-创建一个 `CustomScannerRegistrar` 实现 `ImportBeanDefinitionRegistrar` 接口，之后再通过 @Import 引入导入该类即可
+创建一个 `CustomScannerRegistrar` 实现 `ImportBeanDefinitionRegistrar` 接口，之后再通过 @Import 引入 `CustomScannerRegistrar`，之后就会调用我们自己定义的注册 Bean 的方法
 
 
 
 
 
-CustomScannerRegistrar：
+`CustomScannerRegistrar：`
 
-在 @RpcScan 注解中 @Import 了 CustomScannerRegistrar 这个类，之后会调用这个类的 registerBeanDefinitions() 方法，在这个方法中我们取出来 @RpcScan 注解的 basePackage 属性，此时 Spring 只拿到了 @RpcScan 的扫描路径，并不知道需要去扫描，之后我们再去定义自己的扫描器，指定扫描路径，就可以将扫描到的 Bean 添加到 Spring 容器中了
+在 @RpcScan 注解中 @Import 了 CustomScannerRegistrar 这个类，之后会调用这个类的 registerBeanDefinitions() 方法，在这个方法中我们取出来 @RpcScan 注解的 basePackage 属性，此时 Spring 只拿到了 @RpcScan 的扫描路径，之后我们再去定义自己的扫描器 `CustomScanner`，指定扫描路径，就可以将扫描到的 Bean 添加到 Spring 容器中了
 
 ```java
 /**
@@ -203,7 +250,7 @@ SpringBeanPostProcessor 作为 Bean 的后置处理器，之前在 CustomScanner
 
 - `@RpcService` 标注的 Bean 表示这是一个需要对外提供远程服务的 Bean，我们在 Bean 初始化前（`postProcessBeforeInitialization`）判断该 Bean 是否带有 `@RpcService` 注解，如果有，则将该 Bean 作为一个远程服务发布出去。
 
-  发布远程服务也就是将该 Bean 的`方法信息`以及 Netty 通信的 `ip+端口` 拼成一个字符串，在 zookeeper 中作为一个持久化节点
+  发布远程服务也就是将该 Bean 的`方法信息`以及 Netty 通信的 `ip+端口` 拼成一个字符串（`/my-rpc/com.zqy.ClientTest.Server.HelloServicegroup1version1/192.168.1.3:9999`），在 zookeeper 中作为一个持久化节点
 
   `@RpcService` 使用：
 
@@ -332,7 +379,9 @@ public class ZkServiceDiscoveryImpl implements ServiceDiscovery {
 1. 首先根据扩展类的类型拿到扩展类加载器 `ExtensionLoader `
 2. 再通过 `ExtensionLoader` 的 `getExtension()` 方法拿到扩展类的实例对象，流程如下：
 
-![SPI getExtension未命名文件](images/SPI getExtension未命名文件.png)
+![SPI getExtension未命名文件](images/SPI流程.png)
+
+
 
 
 
@@ -691,6 +740,78 @@ Netty 客户端在收到 Netty 服务端响应的方法执行结果后，会做�
 
 
 
+
+
+## 4、netty 的心跳保活
+
+通过在 Netty 客户端的通道中添加 `IdleStateHandler` 来监听 Channel 的写空闲，如果写空闲，那么就主动向服务端发送心跳保活数据包，来保证客户端和服务端的长连接不会中断
+
+Netty 中提供了 `IdleStateHandler` 类来进行心跳的处理，它可以对一个 Channel 的读/写设置定时器，当 Channel 在一定时间间隔内没有数据交互时，即处于 idle 状态，有 3 种 idle 状态为：`READER_IDLE`、`WRITER_IDLE`、`ALL_IDLE`
+
+当我们添加了 `IdleStateHandler` 之后，才会触发 `userEventTriggered` 方法
+
+```java
+// 三次参数分别为：readerIdleTime（读超时时间）、writerIdleTime（写超时时间）、allIdleTime（所有超时时间）
+pipeline.addLast(new IdleStateHandler(3, 4, 5, TimeUnit.SECONDS)); 
+```
+
+
+
+
+
+那么在 Netty 中实现心跳机制的步骤为：
+
+1. 服务端添加 `IdleStateHandler`，并且只监听`读空闲`，当服务端超过`读空闲`时间之后，会调用服务端 Handler 的 `userEventTriggered` 方法，说明客户端已经 30 秒没有发送数据，则服务端主动断开连接
+2. 客户端添加 `IdleStateHandler`，并且只监听`写空闲`，当客户端达到`写空闲`的时间之后，会向服务端发送一个我们自己定义的心跳包，来维持客户端和服务端之间的连接
+
+
+
+
+我们在 `simple-rpc` 中让客户端主动向服务端发送心跳通知，因此在客户端添加 `IdleStateHandler` 之后，假设客户端代码为：`p.addLast(new IdleStateHandler(0, 5, 0, TimeUnit.SECONDS));`，将客户端 `写空闲` 时间设置为 5 s，那么每当客户端 5s 没有向服务端发送数据，客户端就会超过 `写空闲` 时间，我们就在 `userEventTriggered` 中监听`写空闲`，客户端再主动向服务端发送心跳包
+
+
+
+
+
+## 5、自定义编码器/解码器解决粘包拆包问题
+
+参考文章：https://blog.51cto.com/u_14014612/5763026
+
+通过自定义`RpcMessageDecoder`和`RpcMessageEncoder`，来自定义对消息如何编码和解码
+
+在 Netty 中，消息的载体是 `ByteBuf`，所以需要自定义编码器，将我们需要传输的对象类型的消息给放到 ByteBuf 中进行传输，编码器通过继承 `MessageToByteEncoder<RpcMessage>` 来实现， RpcMessage 是我们自定义的 rpc 通信的实体类，在编码器中需要将 RpcMessage 给读取到 ByteBuf 中，之后 ByteBuf 在 Netty 的通道中进行传输
+
+
+
+那么在接收数据时，还需要自定义解码器来将 ByteBuf 中的数据转成我们自定义的 rpc 通信类(RpcMessage)，那么解码器通过继承 `LengthFieldBasedFrameDecoder` 类来实现，并且通过继承该类可以解决 Netty 中的粘包拆包问题，可以根据应用层消息的长度来对消息进行划分
+
+ 
+
+**LengthFieldBasedFrameDecoder 构造函数参数说明：**
+
+```java
+super(RpcConstants.MAX_FRAME_LENGTH, 5, 4, -9, 0);
+```
+
+总共有 5 个参数：
+
+1. maxFrameLength：最大报文长度
+2. lengthFieldOffset：长度域偏移量
+3. lengthFieldLength：长度域长度
+4. lengthAdjustment：长度的调整值
+5. initialBytesToStrip：起使位置需要跳过的字节数，我们不需要跳过，所以设置为 0 即可
+
+重点说一下 `lengthAdjustment` 参数的含义，其他 4 个参数都容易理解：
+
+![1699002771680](images/1699002771680.png)
+
+假如我们定义报文组成如上图，我们依次读取了魔法数、版本、数据长度，Netty 中默认认为长度后面的都是报文内容，但在实际业务场景中可能并不都是，所以通过调整 `lengthAdjustment` 参数，让 Netty 知道需要将报文的哪些部分给解析出来
+
+首先要知道 Netty 默认`长度域`之后都是有效数据，那么 lengthAdjustment 参数的调整是基于长度域的结尾左右调整的
+
+1. `super(Integer.MAX_VALUE, 5, 4, -9, 0)`：这里长度域中我们存储的整个报文的长度，所以令 `lengthAdjustment=-9` ，即我们需要对长度域的值进行修正，真正有效数据的长度 = 整个报文的长度 - （魔法数+版本+数据长度）
+
+   我们举个准确数值的例子就可以理解了，比如一个报文总长度为`20B`，长度域的值为`20B`，那么其实这里长度域的`20B`不仅包含了真正需要传输的数据，还包含`魔法数+版本+数据长度`这 `9B` 的无效数据，因此我们让 `lengthAdjustment=-9` 就表明真正有效的数据是长度域的值再减去 `9B`，因此 Netty 在解码时，就知道了有效数据长度为：`20B - 9B = 11B`，从长度域这个字段之后再读取 `11B` 就是有效数据了
 
 
 

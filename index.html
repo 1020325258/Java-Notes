@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="./lib/vue.css">
     <!-- 引入 Prism.js 的 CSS 样式 -->
     <link rel="stylesheet" href="./lib/prism.css" />
+    <link rel="stylesheet" href="./lib/top-banner-index.css"
+/>
 </head>
 
 <body>
@@ -28,15 +30,21 @@
             right: 12,          	// 数值，组件右侧偏移距离，默认值15。
         };
         window.$docsify = {
+            // topBanner: {
+            //     options: {
+            //         content: "12312312"
+            //     }
+            // },
             // 项目名称
             name: '0-0 docsify笔记',
             // 仓库地址，点击右上角的Github章鱼猫头像会跳转到此地址
-            repo: 'https://gitee.com/star_wwp/learning-notes',
+            repo: 'https://blog.csdn.net/qq_45260619',
             // 侧边栏支持，默认加载的是项目根目录下的_sidebar.md文件
-            loadSidebar: true,
-            // subMaxLevel: 2,
+            // loadSidebar: true,
+            subMaxLevel: 5,
             // 导航栏支持，默认加载的是项目根目录下的_navbar.md文件
             loadNavbar: './config/_navbar.md',
+            loadSidebar: './config/_sidebar.md',
             // 封面支持，默认加载的是项目根目录下的_coverpage.md文件
             // coverpage: './config/_coverpage.md',
             // 最大支持渲染的标题层级
@@ -63,22 +71,23 @@
                 scroll: false, // Enable scrolling
                 height: 500 // Max height
             },
-            /*搜索相关设置*/
-            search: {
-                maxAge: 86400000,// 过期时间，单位毫秒，默认一天
-                paths: 'auto',// 注意：仅适用于 paths: 'auto' 模式
-                placeholder: '搜索',              
-                // 支持本地化
-                placeholder: {
-                    '/': '搜索'
-                },
-                noData: '找不到结果',
-                depth: 5,
-                hideOtherSidebarContent: true,
-                namespace: '0-0 docsify笔记',
-            }
+            // /*搜索相关设置*/
+            // search: {
+            //     maxAge: 86400000,// 过期时间，单位毫秒，默认一天
+            //     paths: 'auto',// 注意：仅适用于 paths: 'auto' 模式
+            //     placeholder: '搜索',              
+            //     // 支持本地化
+            //     placeholder: {
+            //         '/': '搜索'
+            //     },
+            //     noData: '找不到结果',
+            //     depth: 5,
+            //     hideOtherSidebarContent: true,
+            //     namespace: '0-0 docsify笔记',
+            // }
         }
     </script>
+    <script src="./lib/top-banner-index.js"></script>
     <!-- docsify的js依赖 -->
     <script src="./lib/docsify.min.js"></script>
     <script src="./lib/hide-code.min.js"></script>
@@ -90,11 +99,14 @@
     <!-- 图片放大缩小支持 -->
     <script src="./lib/zoom-image.min.js"></script>
     <!-- 搜索功能支持 -->
-    <script src="./lib/search.min.js"></script>
+    <!-- <script src="./lib/search.min.js"></script> -->
     <!-- 侧边目录可折叠 -->
     <script src="./lib/docsify-sidebar-collapse.min.js"></script>
     <!--在所有的代码块上添加一个简单的Click to copy按钮来允许用户从你的文档中轻易地复制代码-->
-    <script src="./lib/docsify-copy-code.min.js"></script>
+    <!-- <script src="./lib/docsify-copy-code.min.js"></script> -->
+      <!--在所有的代码块上添加一个简单的Click to copy按钮来允许用户从你的文档中轻易地复制代码-->
+    <!-- <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script> -->
+
     <!-- 字数统计 -->
     <script src="./lib/countable.js"></script>
     <!-- iframe显示 -->

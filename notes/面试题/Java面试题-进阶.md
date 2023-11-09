@@ -2072,9 +2072,9 @@ public class Test {
   public static void main(String[] args) {  
       List<String> ls = new ArrayList<String>();  
       List<Integer> li = new ArrayList<Integer>();  
-      // ArrayList<String>经泛型擦除后为ArrayList
-      // ArrayList<Integer>经泛型擦除后为ArrayList
-      // 因此这两个ArrayList的class相同
+      // ArrayList<String>经泛型擦除后为ArrayList<Object>
+      // ArrayList<Integer>经泛型擦除后为ArrayList<Object>
+      // 因此这两个ArrayList<Object>的class相同
       System.out.println(ls.getClass() == li.getClass());  // true
   }  
 

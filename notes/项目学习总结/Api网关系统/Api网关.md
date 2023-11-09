@@ -6,6 +6,47 @@ typora-copy-images-to: img
 
 
 
+## 介绍一下 API 网关吧？
+
+面试官您好，API 网关系统的核心目的是用于解决公司中各类服务的统一出口问题，并且将与业务无关的一些共性功能进行统一封装使用，这包括`鉴权、限流、监控、熔断、切量`，API 网关可以将内部的 RPC 服务以及可扩展的 MQ、SQL、任务等资源，通过 HTTP 对外提供调用，让 APP、WEB、小程序等等有一个统一标准的接入方式
+
+整个项目从架构上被划分为 Netty 通信、服务助手、启动引擎、注册中心、上报接口 sdk 共 5 个模块
+
+**鉴权实现：**
+
+鉴权部分我们通过 `shiro + jwt` 实现，将鉴权操作添加到 Netty 的处理通道中，当请求 API 网关时需要携带 `jwt token`，在鉴权中会通过 shiro 进行认证操作 `subject.login()`，将我们的 `jwt token` 解析操作放在 realm 中，如果 token 解析成功，则鉴权通过；否则鉴权失败
+
+**如何对API网关进行负载均衡：**
+
+通过 nginx 来实现负载均衡，将 API 网关中的`算力模块`（也就是 Netty 核心通信模块）部署多份，通过 nginx 的 upstream 来实现负载均衡，其中负载均衡策略使用最小连接数`least_conn`，即优先选择连接数最少的应用
+
+**如何上报应用的接口信息呢？**
+
+对于服务的 rpc 接口如何暴露出去给网关项目使用呢？其实是我们自己通过 SpringBoot 实现的 starter 即 `上报接口模块` 来实现的，比如此时一个新的 web 应用需要将 rpc 接口给暴露出去，那么就可以引入 `上报接口` 模块，之后通过使用 `上报接口` 模块中定义的注解，标注在需要暴露的方法上即可，就可以将 rpc 接口注册在数据库中去了
+
+**这时我们如何保证 `算力模块` 中保存的 rpc 接口是最新的呢？**
+
+这个通过 Redis 的 `发布/订阅` 功能来实现，即如果有新的 rpc 接口注册进数据库中了，那么我们只需要通过 Redsi 发布一条通知，并在 `算力模块` 中订阅这个通知，当收到通知后，去数据库中拉取新的服务就行，这样就可以保证一直可以调用最新 rpc 接口
+
+**网关接收 HTTP 之后是如何调用到对应的 rpc 服务的呢？**
+
+首先当使用 HTTP 请求 API 网关时，HTTP 请求会由 Netty 通信模块进行解析，解析出 url 以及参数
+
+> - 在启动 Netty 通信模块时，会通过 `注册中心模块` 去数据库中拉取 url 和 rpc 接口的对应关系
+> - 在服务助手模块启动时，会实现 ApplicationContextAware 接口，那么在 `setApplicationContext()` 方法中，会增加一些我们自己的额外操作，这里会去注册中心拉取数据库中的 `uri 和 rpc接口名称` 的对应关系，并且创建一个 `uri -> cglib 动态代理对象` 的映射
+
+那么在解析出 url 的路径之后，就可以就会通过 `uri` 的路径获取到对应的 `cglib 动态代理对象`，那么执行 `代理对象` 的方法，就会进入到拦截器中，会在拦截器中通过 Dubbo 连接获取 Dubbo 的`泛化调用接口`，再通过在 `泛化调用接口` 中传入需要调用的方法以及参数信息，就可以完成 rpc 调用
+
+
+
+## API 网关的亮点在哪里呢？
+
+亮点是将 HTTP 协议给转换成 RPC 协议，通过 Netty 对 HTTP 进行 url、参数解析，并结合动态代理，将 HTTP 调用转换成对应的 RPC 调用
+
+未完！！！
+
+
+
 ## 为什么不用SpringMVC?
 
 在互联网分布式架构下，SpringMVC 有以下缺点：
@@ -19,7 +60,7 @@ typora-copy-images-to: img
 
 在微服务之间进行通信，如果仍然使用 Http 进行通信，就会很慢，因此就出现了 rpc 架构（socket通信），微服务之间通过 Dubbo 进行通信。但是在 Web、小程序、H5 中使用的是 `HTTP`  协议，如果对每一个微服务都编写一套转发（将 http 调用映射到 rpc 调用上），那么项目将会变得冗余且复杂，因此需要 `API网关` 进行统一的协议转换，对外暴露出 Http 接口提供服务。
 
-在分布式架构下，每一个 web 应用都会有一些共性的需求，限流、监控、熔断、降级、切量，会导致维护成本增加，如果可以通过 API 网关进行统一管理，就可以将这些共性的需求融入到 API 网关中，不需要在每一个 web 应用都做一套，极大提升研发效率。
+在分布式架构下，每一个 web 应用都会有一个共性的需求，`鉴权、限流、监控、熔断、切量`，会导致维护成本增加，那么如果通过 API 网关来对所有的 web 应用进行统一管理，就可以将这些共性的需求融入到 API 网关中，不需要在每一个 web 应用都做一套，提高了研发的效率
 
 
 
@@ -1130,5 +1171,79 @@ public class ShiroTest {
         out.close();
     }
 
+```
+
+
+
+
+
+## 3.7 nginx 负载均衡完整配置文件
+
+```bash
+
+user  nginx;
+worker_processes  auto;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf;
+
+    # 设定负载均衡的服务器列表 命令：docker exec Nginx nginx -s reload
+	upstream 10001 {
+		least_conn;
+
+		server 192.168.1.102:7398;
+		server 192.168.1.102:7397;
+		server 192.168.1.102:7399;
+	}
+
+
+    # HTTP服务器
+    server {
+        # 监听80端口，用于HTTP协议
+        listen  80;
+
+        # 定义使用IP/域名访问
+        server_name 192.168.1.102;
+
+        # 首页
+        index index.html;
+
+        # 反向代理的路径（upstream绑定），location 后面设置映射的路径
+        # location / {
+        #    proxy_pass http://192.168.1.102:9001;
+        # }
+
+		location /10001/ {
+			rewrite ^/10001/(.*)$ /$1 break;
+			proxy_pass http://10001;
+		}
+
+    }
+}
 ```
 
